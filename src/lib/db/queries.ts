@@ -393,6 +393,58 @@ export async function getTopSuburbs(
   return rows as Suburb[];
 }
 
+/** Get top-performing agents in a suburb by sales count (matches SuburbAgentContext type) */
+export async function getTopAgentsInSuburb(
+  suburbSlug: string,
+  limit: number = 5
+): Promise<{
+  fullName: string;
+  agencyName: string;
+  salesCountSuburb: number;
+  specializations: string[];
+  rating: number;
+}[]> {
+  const rows = sqliteDb
+    .prepare(
+      `SELECT a.full_name, a.total_sales_count, a.ratings_average, a.specializations,
+              COALESCE(ag.name, 'Independent Agent') as agency_name
+       FROM agents a
+       LEFT JOIN agencies ag ON a.agency_id = ag.id
+       INNER JOIN agent_suburbs asub ON a.id = asub.agent_id
+       INNER JOIN suburbs s ON s.id = asub.suburb_id
+       WHERE s.slug = ?
+       ORDER BY a.total_sales_count DESC NULLS LAST
+       LIMIT ?`
+    )
+    .all(suburbSlug, limit) as {
+    full_name: string;
+    agency_name: string;
+    total_sales_count: number | null;
+    ratings_average: number | null;
+    specializations: string | null;
+  }[];
+
+  return rows.map((r) => {
+    // Parse specializations JSON or comma-separated
+    let specs: string[] = [];
+    if (r.specializations) {
+      try {
+        const parsed = JSON.parse(r.specializations);
+        specs = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        specs = r.specializations.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+    return {
+      fullName: r.full_name,
+      agencyName: r.agency_name,
+      salesCountSuburb: r.total_sales_count ?? 0,
+      specializations: specs,
+      rating: r.ratings_average ?? 0,
+    };
+  });
+}
+
 // ===========================================================================
 // Search queries (FTS5)
 // ===========================================================================

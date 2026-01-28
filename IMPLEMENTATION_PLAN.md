@@ -1,6 +1,6 @@
 # AgentIndex Implementation Plan
 
-Last updated: 2026-01-28 — Phase 8.1 completed
+Last updated: 2026-01-29 — Phase 8.4 completed
 
 ---
 
@@ -10,7 +10,7 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 |-------|--------|-------|
 | Phase 1: Next.js Setup | **Complete** | Next.js 15, React 19, Tailwind 4, TypeScript 5 |
 | Phase 2: Database Schema | **Complete** | 7 tables, FTS5, 17,503 suburbs seeded |
-| Phase 3: Data Pipeline | **In Progress** | Sample data seeded, AI pipeline needs refinement |
+| Phase 3: Data Pipeline | **Working** | v2 pipeline complete with retry logic, parallel enrichment |
 | Phase 3.5: Query Helpers | **Complete** | 20+ query functions |
 | Phase 4: API Routes | **Complete** | 8 API endpoints implemented |
 | Phase 5: UI Components | **Complete** | 19 components, all typed |
@@ -116,23 +116,44 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 
 ## Remaining Work (Priority Order)
 
-### Phase 3: Data Pipeline — IN PROGRESS
+### Phase 3: Data Pipeline — **WORKING**
 
-**Status:** Sample data seeded, AI pipeline needs refinement.
+**Status:** Pipeline v2 complete and tested. Successfully researches agencies and agents via Claude Agent SDK.
 
 **Implemented:**
-- `pipeline/schemas/index.ts` — Zod schemas: AgencyOutput, AgentOutput, SaleOutput, ReviewOutput
-- `pipeline/agents/index.ts` — Agent prompts for agency research, sales, reviews
-- `pipeline/scripts/pipeline.ts` — CLI with --location, --agencies, --discover-agencies options
+- `pipeline/scripts/pipeline.ts` — v2 CLI with multi-phase architecture, retry logic, parallel enrichment
+- `pipeline/agents/skills.ts` — Specialized skill prompts: Agency Discovery, Team Discovery, Agent Enrichment
+- `pipeline/schemas/index.ts` — Zod schemas with nullable fields for AI output tolerance
+- `pipeline/PIPELINE.md` — Comprehensive documentation
 - `@anthropic-ai/claude-agent-sdk` v0.2.22 installed
-- Zod 4.3.6 installed
+
+**v2 Fixes (from previous issues):**
+- ✅ **Structured output extraction** — Multiple JSON parsing strategies (code blocks, objects, arrays)
+- ✅ **Retry logic with exponential backoff** — 3 retries per query
+- ✅ **Nullable schemas** — Handles null values from AI responses gracefully
+- ✅ **Real-time progress feedback** — Phase-by-phase CLI output with icons
+- ✅ **Higher budget/turns** — $3.0 budget, 20 turns (was $0.50/10)
+- ✅ **Parallel agent enrichment** — Configurable concurrency (default: 5)
+- ✅ **Pipeline run tracking** — Records stored in `pipeline_runs` table
+
+**Usage:**
+```bash
+# Single agency (primary mode)
+pnpm pipeline:run --agency "Ray White Bondi Beach"
+
+# Discovery mode
+pnpm pipeline:run --location "Bondi Beach, NSW" --discover-agencies --limit 5
+
+# With enrichment disabled (faster)
+pnpm pipeline:run --agency "McGrath" --no-sales --no-reviews --max-agents 10
+```
+
+**Tested runs:**
+- LJ Hooker Bondi Beach: 1 agency, 2 agents (success)
+- Belle Property Bondi: 1 agency, 17 agents discovered (dry-run success)
 
 #### Sample Data Seeder
-- Created `scripts/seed-sample-data.ts` for MVP demos while AI pipeline is refined
-- Seeded 3 agencies: Ray White, McGrath, Belle Property Bondi Beach
-- 7 agents with realistic data: photos, bios, licenses, languages
-- 14 sales records
-- 12 reviews
+- Created `scripts/seed-sample-data.ts` for MVP demos
 - Run with: `pnpm pipeline:seed-sample`
 
 ---
@@ -190,10 +211,12 @@ mcp__playwright__browser_fill_form → create agent
 mcp__playwright__browser_snapshot → copy agent ID
 ```
 
-#### 8.4 Voice Context Improvements
-- [ ] **8.4.1** — Fix suburb context missing `topAgents` (currently returns empty array)
-  - Add database query to fetch top agents by sales in suburb
-  - Located in `/api/voice/signed-url/route.ts` line 281
+#### 8.4 Voice Context Improvements ✓
+- [x] **8.4.1** — Fix suburb context missing `topAgents`
+  - Added `getTopAgentsInSuburb()` query in `src/lib/db/queries.ts`
+  - Joins agents → agent_suburbs → suburbs, returns top 5 agents by sales
+  - Returns `SuburbAgentContext[]` with fullName, agencyName, salesCountSuburb, specializations, rating
+  - Updated `/api/voice/signed-url/route.ts` to call new query
 
 #### 8.5 Mobile Voice Sheet (Optional)
 - [ ] **8.5.1** — Create `src/components/voice/MobileVoiceSheet.tsx` — Full-width bottom sheet on mobile
@@ -225,6 +248,33 @@ mcp__playwright__browser_snapshot → copy agent ID
 - next.config.ts webpack watchOptions: exclude non-Next.js directories to prevent rebuild loops
 - AgentPhoto component: needs null checks for firstName/lastName to handle missing data
 - Sample data seeder approach: MVP demos while AI pipeline is refined
+
+## Build System Guardrails
+
+### agent-ralph-ui Isolation (Critical)
+
+`agent-ralph-ui/` is an internal Vite tool completely separate from the Next.js app. It must be excluded from all Next.js build tooling:
+
+| Config File | What to Add |
+|-------------|-------------|
+| `pnpm-workspace.yaml` | Remove from packages array or add `!agent-ralph-ui` |
+| `tsconfig.json` | Add `"agent-ralph-ui"` to `exclude` array |
+| `eslint.config.mjs` | Add `"agent-ralph-ui/**"` to ignores |
+| `next.config.ts` | Add to `outputFileTracingExcludes` |
+
+**Why each matters:**
+- `watchOptions.ignored` only reduces watcher churn — it does NOT stop Next.js from scanning during build
+- `outputFileTracingExcludes` prevents Next.js from bundling these files in production output
+- pnpm workspace inclusion causes dependency resolution conflicts
+- tsconfig inclusion causes type errors from Vite-specific code
+
+**If build breaks mentioning agent-ralph-ui:** Check all four configs above.
+
+### Null-Safe Component Props
+
+Components that receive database fields must handle null/undefined:
+- `AgentPhoto`: firstName/lastName may be null for incomplete records
+- Use optional chaining (`?.`) and nullish coalescing (`??`) for all DB fields
 
 ---
 

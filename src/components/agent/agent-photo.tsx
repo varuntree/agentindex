@@ -4,8 +4,8 @@ type PhotoSize = "sm" | "md" | "lg" | "xl";
 
 interface AgentPhotoProps {
   photoUrl?: string | null;
-  firstName: string;
-  lastName: string;
+  firstName?: string | null;
+  lastName?: string | null;
   size?: PhotoSize;
   className?: string;
 }
@@ -25,8 +25,8 @@ function AgentPhoto({
   className = "",
 }: AgentPhotoProps) {
   const { px, text } = sizeMap[size];
-  const first = firstName || '';
-  const last = lastName || '';
+  const first = (firstName ?? "").trim();
+  const last = (lastName ?? "").trim();
   const initials = `${first.charAt(0) || '?'}${last.charAt(0) || '?'}`.toUpperCase();
   const alt = `${first} ${last}`.trim() || 'Agent';
 

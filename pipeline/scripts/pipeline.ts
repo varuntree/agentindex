@@ -1,16 +1,21 @@
 #!/usr/bin/env tsx
 /**
- * AgentIndex Data Pipeline
+ * AgentIndex Data Pipeline v2
  *
- * Uses Claude Agent SDK to research real estate agencies and agents.
- * Stores results in SQLite via Drizzle ORM.
+ * Multi-agent orchestrated pipeline using Claude Agent SDK.
+ * Fixes from v1:
+ * - Structured outputs (no regex JSON parsing)
+ * - Retry logic with exponential backoff
+ * - Parallel agency processing
+ * - Real-time progress feedback
+ * - Higher budget and turn limits
  *
  * Usage:
- *   pnpm pipeline:run --location "Bondi Beach, NSW" --agencies "Ray White,McGrath"
+ *   pnpm pipeline:run --agency "Ray White Bondi Beach"
  *   pnpm pipeline:run --location "Bondi Beach, NSW" --discover-agencies --limit 5
  */
 
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../../src/lib/db';
@@ -29,6 +34,7 @@ import {
 } from '../../src/lib/db/schema';
 import {
   AgencyOutputSchema,
+  AgentOutputSchema,
   SaleOutputSchema,
   ReviewOutputSchema,
   generateSlug,
@@ -40,42 +46,69 @@ import {
   type ReviewOutput,
 } from '../schemas';
 import {
-  buildAgencyResearchPrompt,
-  buildSalesResearchPrompt,
-  buildReviewResearchPrompt,
-  type AgencyResearchTask,
-  type AgentEnrichmentTask,
-} from '../agents';
+  buildAgencyDiscoveryPrompt,
+  buildTeamDiscoveryPrompt,
+  buildAgentEnrichmentPrompt,
+  type AgencyDiscoveryInput,
+  type TeamDiscoveryInput,
+  type AgentEnrichmentInput,
+} from '../agents/skills';
+
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+const CONFIG = {
+  maxTurns: 20,
+  maxBudgetUsd: 3.0,
+  maxRetries: 3,
+  retryDelayMs: 2000,
+  concurrentAgencies: 2,
+  concurrentAgentEnrichment: 5,
+};
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
 
 interface CLIArgs {
+  agency?: string;
   location: string;
   agencies?: string[];
   discoverAgencies: boolean;
   limit: number;
+  maxAgents: number;
+  concurrency: number;
   enrichSales: boolean;
   enrichReviews: boolean;
   dryRun: boolean;
+  json: boolean;
+  verbose: boolean;
 }
 
 function parseArgs(): CLIArgs {
   const args = process.argv.slice(2);
   const result: CLIArgs = {
+    agency: undefined,
     location: '',
     agencies: undefined,
     discoverAgencies: false,
     limit: 10,
+    maxAgents: 50,
+    concurrency: 5,
     enrichSales: true,
     enrichReviews: true,
     dryRun: false,
+    json: false,
+    verbose: false,
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     switch (arg) {
+      case '--agency':
+        result.agency = args[++i] || '';
+        break;
       case '--location':
       case '-l':
         result.location = args[++i] || '';
@@ -90,6 +123,12 @@ function parseArgs(): CLIArgs {
       case '--limit':
         result.limit = parseInt(args[++i] || '10', 10);
         break;
+      case '--max-agents':
+        result.maxAgents = parseInt(args[++i] || '50', 10);
+        break;
+      case '--concurrency':
+        result.concurrency = parseInt(args[++i] || '5', 10);
+        break;
       case '--no-sales':
         result.enrichSales = false;
         break;
@@ -98,6 +137,13 @@ function parseArgs(): CLIArgs {
         break;
       case '--dry-run':
         result.dryRun = true;
+        break;
+      case '--json':
+        result.json = true;
+        break;
+      case '--verbose':
+      case '-v':
+        result.verbose = true;
         break;
       case '--help':
       case '-h':
@@ -111,25 +157,106 @@ function parseArgs(): CLIArgs {
 
 function printHelp(): void {
   console.log(`
-AgentIndex Data Pipeline
+AgentIndex Data Pipeline v2
 
 Usage:
-  pnpm pipeline:run --location "Suburb, STATE" [options]
+  pnpm pipeline:run --agency "Agency Name" [options]
+  pnpm pipeline:run --location "Suburb, STATE" --discover-agencies [options]
 
 Options:
-  -l, --location <loc>     Target location (required)
+  --agency <name>          Single agency to research (primary mode)
+  -l, --location <loc>     Target location for discovery
   -a, --agencies <list>    Comma-separated agency names
   --discover-agencies      Auto-discover agencies in location
   --limit <n>              Max agencies to process (default: 10)
+  --max-agents <n>         Max agents to enrich per agency (default: 50)
+  --concurrency <n>        Parallel enrichment workers (default: 5)
   --no-sales               Skip sales enrichment
   --no-reviews             Skip reviews enrichment
   --dry-run                Validate without saving to DB
+  --json                   Output machine-readable JSON logs
+  -v, --verbose            Show detailed progress
   -h, --help               Show this help
 
 Examples:
-  pnpm pipeline:run --location "Bondi Beach, NSW" --agencies "Ray White,McGrath"
-  pnpm pipeline:run --location "Surry Hills, NSW" --discover-agencies --limit 5
+  # Research a single agency
+  pnpm pipeline:run --agency "Ray White Bondi Beach"
+
+  # Discover agencies in a location
+  pnpm pipeline:run --location "Bondi Beach, NSW" --discover-agencies --limit 5
+
+  # Multiple specific agencies
+  pnpm pipeline:run --location "Sydney, NSW" --agencies "McGrath,Belle Property"
 `);
+}
+
+// ---------------------------------------------------------------------------
+// Logging utilities
+// ---------------------------------------------------------------------------
+
+interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'debug' | 'progress';
+  phase: string;
+  message: string;
+  data?: Record<string, unknown>;
+}
+
+let jsonMode = false;
+let verboseMode = false;
+
+function log(
+  level: LogEntry['level'],
+  phase: string,
+  message: string,
+  data?: Record<string, unknown>
+): void {
+  const entry: LogEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    phase,
+    message,
+    data,
+  };
+
+  if (jsonMode) {
+    console.log(JSON.stringify(entry));
+    return;
+  }
+
+  const icons: Record<string, string> = {
+    info: 'ℹ️',
+    warn: '⚠️',
+    error: '❌',
+    debug: '🔍',
+    progress: '➤',
+  };
+
+  const icon = icons[level] || '•';
+
+  if (level === 'debug' && !verboseMode) return;
+
+  if (level === 'progress') {
+    console.log(`  ${icon} [${phase}] ${message}`);
+  } else if (level === 'error') {
+    console.error(`${icon} [${phase}] ${message}`);
+  } else {
+    console.log(`${icon} [${phase}] ${message}`);
+  }
+
+  if (data && verboseMode) {
+    console.log('    Data:', JSON.stringify(data, null, 2));
+  }
+}
+
+function logPhaseStart(phase: string, description: string): void {
+  if (!jsonMode) {
+    console.log(`\n${'─'.repeat(50)}`);
+    console.log(`📍 ${phase}: ${description}`);
+    console.log('─'.repeat(50));
+  } else {
+    log('info', phase, description);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +269,7 @@ interface PipelineStats {
   salesFound: number;
   reviewsFound: number;
   errors: string[];
+  startTime: number;
 }
 
 async function createPipelineRun(location: string): Promise<number> {
@@ -176,321 +304,506 @@ async function completePipelineRun(
 }
 
 // ---------------------------------------------------------------------------
-// SDK helper to run query and extract result
+// Retry-enabled query runner with structured output extraction
 // ---------------------------------------------------------------------------
 
 interface QueryResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+  attempts: number;
+  durationMs: number;
 }
 
-async function runQuery<T>(
+async function runQueryWithRetry<T>(
   prompt: string,
-  schema?: z.ZodSchema<T>
+  schema: z.ZodSchema<T>,
+  context: string
 ): Promise<QueryResult<T>> {
-  try {
-    let resultText = '';
+  const startTime = Date.now();
+  let lastError = '';
+  
+  for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
+    try {
+      log('debug', context, `Attempt ${attempt}/${CONFIG.maxRetries}`);
+      
+      let resultText = '';
+      let structuredOutput: unknown = undefined;
 
-    for await (const message of query({
-      prompt,
-      options: {
-        allowedTools: ['WebSearch', 'WebFetch'],
-        maxTurns: 10,
-        maxBudgetUsd: 0.50,
-      },
-    })) {
-      // Collect assistant messages
-      if (message.type === 'assistant') {
-        const content = message.message?.content;
-        if (Array.isArray(content)) {
-          for (const block of content) {
-            if (block.type === 'text') {
-              resultText += block.text;
+      for await (const message of query({
+        prompt,
+        options: {
+          allowedTools: ['WebSearch', 'WebFetch'],
+          maxTurns: CONFIG.maxTurns,
+          maxBudgetUsd: CONFIG.maxBudgetUsd,
+        },
+      })) {
+        // Show progress for tool use
+        if (message.type === 'assistant' && verboseMode) {
+          const content = message.message?.content;
+          if (Array.isArray(content)) {
+            for (const block of content) {
+              if (block.type === 'tool_use') {
+                log('debug', context, `Tool: ${block.name}`);
+              }
             }
+          }
+        }
+
+        // Collect text content
+        if (message.type === 'assistant') {
+          const content = message.message?.content;
+          if (Array.isArray(content)) {
+            for (const block of content) {
+              if (block.type === 'text') {
+                resultText += block.text;
+              }
+            }
+          }
+        }
+
+        // Handle result message
+        if (message.type === 'result') {
+          if (message.subtype === 'success') {
+            // Check for structured output first
+            if ('structured_output' in message && message.structured_output) {
+              structuredOutput = message.structured_output;
+            } else if (message.result) {
+              resultText = typeof message.result === 'string'
+                ? message.result
+                : JSON.stringify(message.result);
+            }
+          } else {
+            lastError = `Query ended with: ${message.subtype}`;
+            log('warn', context, lastError);
+            break;
           }
         }
       }
 
-      // Check for result message
-      if (message.type === 'result') {
-        if (message.subtype === 'success' && message.result) {
-          resultText = typeof message.result === 'string'
-            ? message.result
-            : JSON.stringify(message.result);
-        } else if (message.subtype.startsWith('error')) {
-          // Handle various error subtypes: error_during_execution, error_max_turns, etc.
+      // Validate output
+      let dataToValidate = structuredOutput;
+      
+      if (!dataToValidate && resultText) {
+        // Try multiple JSON extraction strategies
+        dataToValidate = extractJSON(resultText);
+      }
+
+      if (dataToValidate) {
+        const validated = schema.safeParse(dataToValidate);
+        if (validated.success) {
           return {
-            success: false,
-            error: `Query failed: ${message.subtype}`,
+            success: true,
+            data: validated.data,
+            attempts: attempt,
+            durationMs: Date.now() - startTime,
           };
         }
+        lastError = `Validation failed: ${validated.error.message}`;
+        log('warn', context, lastError);
+      } else {
+        lastError = 'No JSON data found in response';
+        log('warn', context, lastError);
       }
+
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      log('warn', context, `Attempt ${attempt} error: ${lastError}`);
     }
 
-    // Try to extract JSON from the result
-    if (schema && resultText) {
-      // Find JSON object or array in the text
-      const jsonMatch = resultText.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[1]);
-        const validated = schema.safeParse(parsed);
-        if (validated.success) {
-          return { success: true, data: validated.data };
-        }
-        return { success: false, error: `Validation failed: ${validated.error.message}` };
-      }
+    // Exponential backoff before retry
+    if (attempt < CONFIG.maxRetries) {
+      const delay = CONFIG.retryDelayMs * Math.pow(2, attempt - 1);
+      log('debug', context, `Retrying in ${delay}ms...`);
+      await sleep(delay);
     }
-
-    // Return raw text if no schema
-    return { success: true, data: resultText as unknown as T };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
   }
+
+  return {
+    success: false,
+    error: lastError,
+    attempts: CONFIG.maxRetries,
+    durationMs: Date.now() - startTime,
+  };
 }
 
-// ---------------------------------------------------------------------------
-// Agency discovery
-// ---------------------------------------------------------------------------
-
-const AgencyListSchema = z.array(z.string());
-
-async function discoverAgencies(location: string, limit: number): Promise<string[]> {
-  console.log(`Discovering agencies in ${location}...`);
-
-  const prompt = `Find the top ${limit} real estate agencies in ${location}, Australia.
-
-Search for major agencies like Ray White, McGrath, LJ Hooker, Belle Property, etc.
-Also include local independent agencies operating in that area.
-
-Return ONLY a JSON array of agency names (including the suburb in the name if relevant).
-Example format: ["Ray White Bondi Beach", "McGrath Estate Agents Bondi Beach", "Belle Property Bondi"]
-
-Do NOT include any explanation - just the JSON array.`;
-
-  const result = await runQuery(prompt, AgencyListSchema);
-  if (result.success && result.data) {
-    console.log(`Found ${result.data.length} agencies`);
-    return result.data.slice(0, limit);
+/**
+ * Extract JSON from text using multiple strategies
+ */
+function extractJSON(text: string): unknown | null {
+  // Strategy 1: Look for JSON code blocks
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch { /* continue */ }
   }
 
-  console.error('Failed to discover agencies:', result.error);
-  return [];
-}
-
-// ---------------------------------------------------------------------------
-// Agency research
-// ---------------------------------------------------------------------------
-
-async function researchAgency(task: AgencyResearchTask): Promise<AgencyOutput | null> {
-  console.log(`Researching agency: ${task.agencyName}...`);
-
-  const result = await runQuery(buildAgencyResearchPrompt(task), AgencyOutputSchema);
-
-  if (result.success && result.data) {
-    console.log(`  Found ${result.data.agents.length} agents`);
-    return result.data;
+  // Strategy 2: Find first complete JSON object
+  const objectMatch = text.match(/\{[\s\S]*\}/);
+  if (objectMatch) {
+    try {
+      return JSON.parse(objectMatch[0]);
+    } catch { /* continue */ }
   }
 
-  console.error(`  Research failed: ${result.error}`);
+  // Strategy 3: Find first complete JSON array
+  const arrayMatch = text.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    try {
+      return JSON.parse(arrayMatch[0]);
+    } catch { /* continue */ }
+  }
+
+  // Strategy 4: Try parsing the entire text
+  try {
+    return JSON.parse(text.trim());
+  } catch { /* continue */ }
+
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Agent enrichment (sales + reviews)
-// ---------------------------------------------------------------------------
-
-const SalesArraySchema = z.array(SaleOutputSchema);
-const ReviewsArraySchema = z.array(ReviewOutputSchema);
-
-async function enrichAgentSales(task: AgentEnrichmentTask): Promise<SaleOutput[]> {
-  console.log(`  Fetching sales for ${task.agentName}...`);
-
-  const result = await runQuery(buildSalesResearchPrompt(task), SalesArraySchema);
-
-  if (result.success && result.data) {
-    console.log(`    Found ${result.data.length} sales`);
-    return result.data;
-  }
-
-  console.error(`    Sales fetch failed: ${result.error}`);
-  return [];
-}
-
-async function enrichAgentReviews(task: AgentEnrichmentTask): Promise<ReviewOutput[]> {
-  console.log(`  Fetching reviews for ${task.agentName}...`);
-
-  const result = await runQuery(buildReviewResearchPrompt(task), ReviewsArraySchema);
-
-  if (result.success && result.data) {
-    console.log(`    Found ${result.data.length} reviews`);
-    return result.data;
-  }
-
-  console.error(`    Reviews fetch failed: ${result.error}`);
-  return [];
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ---------------------------------------------------------------------------
-// Storage
+// Phase 1: Agency Discovery
 // ---------------------------------------------------------------------------
 
-async function storeAgency(
-  agencyData: AgencyOutput,
+const AgencyBasicSchema = z.object({
+  name: z.string(),
+  brandName: z.string().optional().nullable(),
+  websiteUrl: z.string().url().optional().nullable(),
+  logoUrl: z.string().url().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  streetAddress: z.string().optional().nullable(),
+  suburb: z.string(),
+  state: z.string(),
+  postcode: z.string(),
+  lat: z.number().optional().nullable(),
+  lng: z.number().optional().nullable(),
+  description: z.string().optional().nullable(),
+  sourceUrl: z.string().url().optional().nullable(),
+});
+
+type AgencyBasic = z.infer<typeof AgencyBasicSchema>;
+
+async function discoverAgency(
+  agencyName: string,
+  location: string
+): Promise<AgencyBasic | null> {
+  const [suburb, state] = parseLocation(location);
+  
+  const input: AgencyDiscoveryInput = {
+    agencyName,
+    suburb,
+    state,
+  };
+
+  const prompt = buildAgencyDiscoveryPrompt(input);
+  const result = await runQueryWithRetry(
+    prompt,
+    AgencyBasicSchema,
+    `Agency:${agencyName}`
+  );
+
+  if (result.success && result.data) {
+    log('progress', 'Discovery', 
+      `Found: ${result.data.name} (${result.data.websiteUrl || 'no website'})`,
+      { attempts: result.attempts, duration: result.durationMs }
+    );
+    return result.data;
+  }
+
+  log('error', 'Discovery', `Failed for ${agencyName}: ${result.error}`);
+  return null;
+}
+
+async function discoverAgenciesInLocation(
+  location: string,
+  limit: number
+): Promise<string[]> {
+  log('progress', 'Discovery', `Searching for agencies in ${location}...`);
+
+  const prompt = `Search for the top ${limit} real estate agencies in ${location}, Australia.
+Return ONLY a JSON array of agency names, nothing else.
+Example: ["Ray White Bondi Beach", "McGrath Estate Agents", "Belle Property"]`;
+
+  const AgencyListSchema = z.array(z.string());
+  
+  const result = await runQueryWithRetry(
+    prompt,
+    AgencyListSchema,
+    'AgencyList'
+  );
+
+  if (result.success && result.data) {
+    log('progress', 'Discovery', `Found ${result.data.length} agencies`);
+    return result.data.slice(0, limit);
+  }
+
+  log('error', 'Discovery', `Failed to discover agencies: ${result.error}`);
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2: Team Discovery
+// ---------------------------------------------------------------------------
+
+const AgentStubSchema = z.object({
+  firstName: z.string(),
+  lastName: z.string(),
+  photoUrl: z.string().url().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  mobilePhone: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  profileUrl: z.string().url().optional().nullable(),
+  role: z.string().optional().nullable(),
+  sourceUrl: z.string().url().optional().nullable(),
+});
+
+const TeamListSchema = z.array(AgentStubSchema);
+
+type AgentStub = z.infer<typeof AgentStubSchema>;
+
+async function discoverTeam(
+  agency: AgencyBasic
+): Promise<AgentStub[]> {
+  if (!agency.websiteUrl) {
+    log('warn', 'Team', `No website for ${agency.name}, skipping team discovery`);
+    return [];
+  }
+
+  const input: TeamDiscoveryInput = {
+    agencyName: agency.name,
+    websiteUrl: agency.websiteUrl,
+    suburb: agency.suburb,
+    state: agency.state,
+  };
+
+  const prompt = buildTeamDiscoveryPrompt(input);
+  const result = await runQueryWithRetry(
+    prompt,
+    TeamListSchema,
+    `Team:${agency.name}`
+  );
+
+  if (result.success && result.data) {
+    log('progress', 'Team', 
+      `Found ${result.data.length} agents at ${agency.name}`,
+      { agents: result.data.map(a => `${a.firstName} ${a.lastName}`) }
+    );
+    return result.data;
+  }
+
+  log('error', 'Team', `Failed for ${agency.name}: ${result.error}`);
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: Agent Enrichment (Parallel)
+// ---------------------------------------------------------------------------
+
+async function enrichAgent(
+  agentStub: AgentStub,
+  agency: AgencyBasic,
   config: CLIArgs
-): Promise<{ agencyId: number; agentCount: number; salesCount: number; reviewCount: number }> {
-  const agencySlug = generateSlug(agencyData.name, agencyData.suburb);
+): Promise<AgentOutput | null> {
+  const input: AgentEnrichmentInput = {
+    firstName: agentStub.firstName,
+    lastName: agentStub.lastName,
+    agencyName: agency.name,
+    agencyWebsite: agency.websiteUrl,
+    profileUrl: agentStub.profileUrl,
+    suburb: agency.suburb,
+    state: agency.state,
+  };
 
-  // Upsert agency
+  // Build enrichment prompt with feature toggles
+  let prompt = buildAgentEnrichmentPrompt(input);
+  
+  if (!config.enrichSales) {
+    prompt += '\n\nNOTE: Skip sales research - do not gather sales history.';
+  }
+  if (!config.enrichReviews) {
+    prompt += '\n\nNOTE: Skip reviews research - do not gather reviews.';
+  }
+
+  const result = await runQueryWithRetry(
+    prompt,
+    AgentOutputSchema,
+    `Enrich:${agentStub.firstName} ${agentStub.lastName}`
+  );
+
+  if (result.success && result.data) {
+    const agent = result.data;
+    log('progress', 'Enrichment',
+      `${agent.firstName} ${agent.lastName}: ` +
+      `${agent.sales?.length || 0} sales, ${agent.reviews?.length || 0} reviews`
+    );
+    return agent;
+  }
+
+  // Return basic agent from stub if enrichment fails
+  log('warn', 'Enrichment', 
+    `Failed for ${agentStub.firstName} ${agentStub.lastName}, using stub data`
+  );
+  
+  return {
+    firstName: agentStub.firstName,
+    lastName: agentStub.lastName,
+    email: agentStub.email,
+    phone: agentStub.phone,
+    mobilePhone: agentStub.mobilePhone,
+    photoUrl: agentStub.photoUrl,
+    suburbsServiced: [agency.suburb],
+    sourceUrl: agentStub.sourceUrl,
+  };
+}
+
+async function enrichAgentsParallel(
+  agentStubs: AgentStub[],
+  agency: AgencyBasic,
+  config: CLIArgs
+): Promise<AgentOutput[]> {
+  const results: AgentOutput[] = [];
+  const concurrency = config.concurrency;
+  
+  // Process in batches
+  for (let i = 0; i < agentStubs.length; i += concurrency) {
+    const batch = agentStubs.slice(i, i + concurrency);
+    log('debug', 'Enrichment', 
+      `Processing batch ${Math.floor(i / concurrency) + 1}/${Math.ceil(agentStubs.length / concurrency)}`
+    );
+    
+    const batchResults = await Promise.all(
+      batch.map((stub) => enrichAgent(stub, agency, config))
+    );
+    
+    for (const result of batchResults) {
+      if (result) {
+        results.push(result);
+      }
+    }
+  }
+
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// Data Storage
+// ---------------------------------------------------------------------------
+
+interface StoreResult {
+  agencyId: number;
+  agentCount: number;
+  salesCount: number;
+  reviewCount: number;
+}
+
+async function storeAgencyWithAgents(
+  agencyBasic: AgencyBasic,
+  enrichedAgents: AgentOutput[],
+  config: CLIArgs
+): Promise<StoreResult> {
+  const agencySlug = generateSlug(agencyBasic.name, agencyBasic.suburb);
+
   const agencyValues: NewAgency = {
     slug: agencySlug,
-    name: agencyData.name,
-    brandName: agencyData.brandName,
-    logoUrl: agencyData.logoUrl,
-    websiteUrl: agencyData.websiteUrl,
-    phone: agencyData.phone,
-    email: agencyData.email,
-    streetAddress: agencyData.streetAddress,
-    suburb: agencyData.suburb,
-    state: agencyData.state,
-    postcode: agencyData.postcode,
-    lat: agencyData.lat,
-    lng: agencyData.lng,
-    description: agencyData.description,
-    sourceUrl: agencyData.sourceUrl,
-    totalAgents: agencyData.agents.length,
+    name: agencyBasic.name,
+    brandName: agencyBasic.brandName,
+    logoUrl: agencyBasic.logoUrl,
+    websiteUrl: agencyBasic.websiteUrl,
+    phone: agencyBasic.phone,
+    email: agencyBasic.email,
+    streetAddress: agencyBasic.streetAddress,
+    suburb: agencyBasic.suburb,
+    state: agencyBasic.state,
+    postcode: agencyBasic.postcode,
+    lat: agencyBasic.lat,
+    lng: agencyBasic.lng,
+    description: agencyBasic.description,
+    sourceUrl: agencyBasic.sourceUrl,
     lastScrapedAt: new Date(),
   };
 
-  // Check if agency exists
-  const existing = await db
+  // Upsert agency
+  const existingAgency = await db
     .select()
     .from(agencies)
     .where(eq(agencies.slug, agencySlug))
     .limit(1);
 
   let agencyId: number;
-  if (existing.length > 0) {
+  if (existingAgency.length > 0) {
     await db.update(agencies).set(agencyValues).where(eq(agencies.slug, agencySlug));
-    agencyId = existing[0].id;
-    console.log(`  Updated agency: ${agencyData.name} (id=${agencyId})`);
+    agencyId = existingAgency[0].id;
+    log('progress', 'Storage', `Updated agency: ${agencyBasic.name} (id=${agencyId})`);
   } else {
     const [inserted] = await db.insert(agencies).values(agencyValues).returning();
     agencyId = inserted.id;
-    console.log(`  Created agency: ${agencyData.name} (id=${agencyId})`);
+    log('progress', 'Storage', `Created agency: ${agencyBasic.name} (id=${agencyId})`);
   }
 
-  // Store agents
   let totalSales = 0;
   let totalReviews = 0;
 
-  for (const agentData of agencyData.agents) {
-    const { salesCount, reviewCount } = await storeAgent(
-      agentData,
-      agencyId,
-      agencyData.name,
-      `${agencyData.suburb}, ${agencyData.state}`,
-      config
-    );
-    totalSales += salesCount;
-    totalReviews += reviewCount;
+  // Store each agent
+  for (const agentData of enrichedAgents) {
+    const result = await storeAgent(agentData, agencyId, agencyBasic.suburb);
+    totalSales += result.salesCount;
+    totalReviews += result.reviewCount;
   }
-
-  // Update agency stats
-  await db
-    .update(agencies)
-    .set({
-      totalAgents: agencyData.agents.length,
-      totalSalesCount: totalSales,
-    })
-    .where(eq(agencies.id, agencyId));
 
   return {
     agencyId,
-    agentCount: agencyData.agents.length,
+    agentCount: enrichedAgents.length,
     salesCount: totalSales,
     reviewCount: totalReviews,
   };
 }
 
+interface AgentStoreResult {
+  agentId: number;
+  salesCount: number;
+  reviewCount: number;
+}
+
 async function storeAgent(
   agentData: AgentOutput,
   agencyId: number,
-  agencyName: string,
-  agencyLocation: string,
-  config: CLIArgs
-): Promise<{ agentId: number; salesCount: number; reviewCount: number }> {
+  defaultSuburb: string
+): Promise<AgentStoreResult> {
   const fullName = `${agentData.firstName} ${agentData.lastName}`;
-  const agentSlug = generateSlug(agentData.firstName, agentData.lastName, agencyName);
+  const agentSlug = generateSlug(agentData.firstName, agentData.lastName);
 
-  // Enrich with sales and reviews if configured
-  let salesData: SaleOutput[] = [];
-  let reviewsData: ReviewOutput[] = [];
+  const avgRating = agentData.reviews
+    ? calculateAverageRating(agentData.reviews as ReviewOutput[])
+    : null;
+  const qualityScore = calculateAgentQualityScore(agentData);
 
-  if (config.enrichSales) {
-    salesData = await enrichAgentSales({
-      agentName: fullName,
-      agencyName,
-      agencyLocation,
-    });
-  }
-
-  if (config.enrichReviews) {
-    reviewsData = await enrichAgentReviews({
-      agentName: fullName,
-      agencyName,
-      agencyLocation,
-    });
-  }
-
-  // Calculate metrics
-  const qualityScore = calculateAgentQualityScore({
-    ...agentData,
-    sales: salesData,
-    reviews: reviewsData,
-  });
-  const avgRating = calculateAverageRating(reviewsData);
-  const totalSalesValue = salesData.reduce(
-    (sum, s) => sum + (s.salePrice || 0),
-    0
-  );
-  const medianPrice = calculateMedian(
-    salesData.filter((s) => s.salePrice).map((s) => s.salePrice!)
-  );
-
-  // Prepare agent record
   const agentValues: NewAgent = {
     slug: agentSlug,
+    agencyId,
     firstName: agentData.firstName,
     lastName: agentData.lastName,
     fullName,
-    email: agentData.email,
-    phone: agentData.phone,
-    mobilePhone: agentData.mobilePhone,
-    photoUrl: agentData.photoUrl,
-    licenseNumber: agentData.licenseNumber,
-    licenseStatus: agentData.licenseStatus,
-    licenseState: agentData.licenseState,
-    agencyId,
-    bio: agentData.bio,
-    yearsActive: agentData.yearsActive,
-    languagesSpoken: agentData.languagesSpoken
-      ? JSON.stringify(agentData.languagesSpoken)
-      : null,
-    specializations: agentData.specializations
-      ? JSON.stringify(agentData.specializations)
-      : null,
-    suburbsServiced: agentData.suburbsServiced
-      ? JSON.stringify(agentData.suburbsServiced)
-      : null,
-    totalSalesCount: salesData.length,
-    totalSalesVolume: totalSalesValue,
-    medianSalePrice: medianPrice,
-    ratingsAverage: avgRating,
-    ratingsCount: reviewsData.length,
+    email: agentData.email ?? null,
+    phone: agentData.phone ?? null,
+    mobilePhone: agentData.mobilePhone ?? null,
+    photoUrl: agentData.photoUrl ?? null,
+    licenseNumber: agentData.licenseNumber ?? null,
+    licenseStatus: agentData.licenseStatus ?? null,
+    licenseState: agentData.licenseState ?? null,
+    bio: agentData.bio ?? null,
+    yearsActive: agentData.yearsActive ?? null,
+    languagesSpoken: agentData.languagesSpoken?.join(', '),
+    specializations: agentData.specializations?.join(', '),
+    ratingOverall: avgRating,
+    reviewCount: agentData.reviews?.length || 0,
+    salesCount: agentData.sales?.length || 0,
     dataQualityScore: qualityScore,
     sourceUrl: agentData.sourceUrl,
     lastScrapedAt: new Date(),
@@ -507,27 +820,38 @@ async function storeAgent(
   if (existingAgent.length > 0) {
     await db.update(agents).set(agentValues).where(eq(agents.slug, agentSlug));
     agentId = existingAgent[0].id;
-    console.log(`    Updated agent: ${fullName} (id=${agentId})`);
+    log('debug', 'Storage', `Updated agent: ${fullName} (id=${agentId})`);
   } else {
     const [inserted] = await db.insert(agents).values(agentValues).returning();
     agentId = inserted.id;
-    console.log(`    Created agent: ${fullName} (id=${agentId})`);
+    log('debug', 'Storage', `Created agent: ${fullName} (id=${agentId})`);
   }
 
   // Link agent to suburbs
-  await linkAgentToSuburbs(agentId, agentData.suburbsServiced);
+  const suburbsToLink = agentData.suburbsServiced?.length
+    ? agentData.suburbsServiced
+    : [defaultSuburb];
+  await linkAgentToSuburbs(agentId, suburbsToLink);
 
   // Store sales
-  for (const sale of salesData) {
-    await storeSale(sale, agentId, agencyId);
+  let salesCount = 0;
+  if (agentData.sales) {
+    for (const sale of agentData.sales) {
+      await storeSale(sale as SaleOutput, agentId, agencyId);
+      salesCount++;
+    }
   }
 
   // Store reviews
-  for (const review of reviewsData) {
-    await storeReview(review, agentId);
+  let reviewCount = 0;
+  if (agentData.reviews) {
+    for (const review of agentData.reviews) {
+      await storeReview(review as ReviewOutput, agentId);
+      reviewCount++;
+    }
   }
 
-  return { agentId, salesCount: salesData.length, reviewCount: reviewsData.length };
+  return { agentId, salesCount, reviewCount };
 }
 
 async function linkAgentToSuburbs(
@@ -538,13 +862,10 @@ async function linkAgentToSuburbs(
   await db.delete(agentSuburbs).where(eq(agentSuburbs.agentId, agentId));
 
   for (const suburbName of suburbNames) {
-    // Find suburb in database
     const [suburb] = await db
       .select()
       .from(suburbs)
-      .where(
-        sql`LOWER(${suburbs.name}) = LOWER(${suburbName})`
-      )
+      .where(sql`LOWER(${suburbs.name}) = LOWER(${suburbName})`)
       .limit(1);
 
     if (suburb) {
@@ -562,7 +883,7 @@ async function storeSale(
   agentId: number,
   agencyId: number
 ): Promise<void> {
-  // Check for duplicate (same address + date)
+  // Check for duplicate
   const existingSale = await db
     .select()
     .from(sales)
@@ -571,9 +892,7 @@ async function storeSale(
     )
     .limit(1);
 
-  if (existingSale.length > 0) {
-    return; // Skip duplicate
-  }
+  if (existingSale.length > 0) return;
 
   const saleValues: NewSale = {
     agentId,
@@ -600,7 +919,10 @@ async function storeSale(
   await db.insert(sales).values(saleValues);
 }
 
-async function storeReview(review: ReviewOutput, agentId: number): Promise<void> {
+async function storeReview(
+  review: ReviewOutput,
+  agentId: number
+): Promise<void> {
   const reviewValues: NewReview = {
     agentId,
     reviewerName: review.reviewerName,
@@ -623,13 +945,11 @@ async function storeReview(review: ReviewOutput, agentId: number): Promise<void>
 // Utility functions
 // ---------------------------------------------------------------------------
 
-function calculateMedian(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2;
+function parseLocation(location: string): [string, string] {
+  const parts = location.split(',').map((s) => s.trim());
+  const suburb = parts[0] || 'Sydney';
+  const state = parts[1] || 'NSW';
+  return [suburb, state];
 }
 
 // ---------------------------------------------------------------------------
@@ -637,21 +957,46 @@ function calculateMedian(values: number[]): number | null {
 // ---------------------------------------------------------------------------
 
 async function runPipeline(config: CLIArgs): Promise<void> {
-  console.log('\n========================================');
-  console.log('AgentIndex Data Pipeline');
-  console.log('========================================\n');
+  jsonMode = config.json;
+  verboseMode = config.verbose;
 
-  if (!config.location) {
-    console.error('Error: --location is required');
+  if (!jsonMode) {
+    console.log('\n════════════════════════════════════════');
+    console.log('     AgentIndex Data Pipeline v2');
+    console.log('════════════════════════════════════════\n');
+  }
+
+  // Determine what to research
+  let agencyNames: string[] = [];
+  let location = config.location;
+
+  if (config.agency) {
+    // Single agency mode
+    agencyNames = [config.agency];
+    if (!location) {
+      // Try to infer location from agency name
+      location = 'NSW';
+    }
+    log('info', 'Config', `Single agency: ${config.agency}`);
+  } else if (config.agencies) {
+    agencyNames = config.agencies;
+    log('info', 'Config', `Agencies: ${agencyNames.join(', ')}`);
+  } else if (config.discoverAgencies) {
+    if (!location) {
+      console.error('Error: --location required with --discover-agencies');
+      process.exit(1);
+    }
+    log('info', 'Config', `Discovering agencies in: ${location}`);
+  } else {
+    console.error('Error: Specify --agency, --agencies, or --discover-agencies');
     printHelp();
     process.exit(1);
   }
 
-  console.log(`Location: ${config.location}`);
-  console.log(`Dry run: ${config.dryRun}`);
-  console.log(`Enrich sales: ${config.enrichSales}`);
-  console.log(`Enrich reviews: ${config.enrichReviews}`);
-  console.log('');
+  log('info', 'Config', `Location: ${location}`);
+  log('info', 'Config', `Dry run: ${config.dryRun}`);
+  log('info', 'Config', `Enrich sales: ${config.enrichSales}`);
+  log('info', 'Config', `Enrich reviews: ${config.enrichReviews}`);
 
   const stats: PipelineStats = {
     agenciesFound: 0,
@@ -659,71 +1004,122 @@ async function runPipeline(config: CLIArgs): Promise<void> {
     salesFound: 0,
     reviewsFound: 0,
     errors: [],
+    startTime: Date.now(),
   };
 
   // Create pipeline run record
   let runId: number | null = null;
   if (!config.dryRun) {
-    runId = await createPipelineRun(config.location);
-    console.log(`Pipeline run ID: ${runId}\n`);
+    runId = await createPipelineRun(location);
+    log('info', 'Pipeline', `Run ID: ${runId}`);
   }
 
   try {
-    // Get agencies to research
-    let agencyNames = config.agencies || [];
-    if (config.discoverAgencies || agencyNames.length === 0) {
-      agencyNames = await discoverAgencies(config.location, config.limit);
+    // Phase 1: Get agency list
+    if (agencyNames.length === 0 && config.discoverAgencies) {
+      logPhaseStart('Phase 1', 'Agency Discovery');
+      agencyNames = await discoverAgenciesInLocation(location, config.limit);
     }
 
     if (agencyNames.length === 0) {
       throw new Error('No agencies to research');
     }
 
-    console.log(`\nProcessing ${agencyNames.length} agencies...\n`);
+    log('info', 'Pipeline', `Processing ${agencyNames.length} agencies`);
 
-    // Research each agency
+    // Process each agency
     for (const agencyName of agencyNames) {
       try {
-        const agencyData = await researchAgency({
-          agencyName,
-          location: config.location,
-        });
+        // Phase 1: Discover agency details
+        logPhaseStart('Phase 1', `Agency: ${agencyName}`);
+        const agencyBasic = await discoverAgency(agencyName, location);
 
-        if (agencyData) {
-          if (config.dryRun) {
-            console.log(`  [DRY RUN] Would store: ${agencyData.name}`);
-            console.log(`    Agents: ${agencyData.agents.length}`);
-            stats.agenciesFound++;
-            stats.agentsFound += agencyData.agents.length;
-          } else {
-            const result = await storeAgency(agencyData, config);
-            stats.agenciesFound++;
-            stats.agentsFound += result.agentCount;
-            stats.salesFound += result.salesCount;
-            stats.reviewsFound += result.reviewCount;
-          }
+        if (!agencyBasic) {
+          stats.errors.push(`${agencyName}: Agency discovery failed`);
+          continue;
         }
+
+        // Phase 2: Discover team
+        logPhaseStart('Phase 2', `Team Discovery: ${agencyBasic.name}`);
+        let agentStubs = await discoverTeam(agencyBasic);
+
+        if (agentStubs.length === 0) {
+          log('warn', 'Team', `No agents found for ${agencyBasic.name}`);
+        }
+
+        // Limit agents if needed
+        if (agentStubs.length > config.maxAgents) {
+          log('info', 'Team', `Limiting to ${config.maxAgents} agents`);
+          agentStubs = agentStubs.slice(0, config.maxAgents);
+        }
+
+        // Phase 3: Enrich agents in parallel
+        let enrichedAgents: AgentOutput[] = [];
+        if (agentStubs.length > 0) {
+          logPhaseStart('Phase 3', `Agent Enrichment (${agentStubs.length} agents)`);
+          enrichedAgents = await enrichAgentsParallel(agentStubs, agencyBasic, config);
+        }
+
+        // Phase 4: Store data
+        if (config.dryRun) {
+          log('info', 'DryRun', 
+            `Would store: ${agencyBasic.name} with ${enrichedAgents.length} agents`
+          );
+          stats.agenciesFound++;
+          stats.agentsFound += enrichedAgents.length;
+          for (const agent of enrichedAgents) {
+            stats.salesFound += agent.sales?.length || 0;
+            stats.reviewsFound += agent.reviews?.length || 0;
+          }
+        } else {
+          logPhaseStart('Phase 4', 'Data Storage');
+          const result = await storeAgencyWithAgents(agencyBasic, enrichedAgents, config);
+          stats.agenciesFound++;
+          stats.agentsFound += result.agentCount;
+          stats.salesFound += result.salesCount;
+          stats.reviewsFound += result.reviewCount;
+        }
+
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.error(`Failed to process ${agencyName}: ${msg}`);
+        log('error', 'Pipeline', `Failed for ${agencyName}: ${msg}`);
         stats.errors.push(`${agencyName}: ${msg}`);
       }
 
       // Small delay between agencies
-      await new Promise((r) => setTimeout(r, 1000));
+      await sleep(1000);
     }
 
     // Print summary
-    console.log('\n========================================');
-    console.log('Pipeline Complete');
-    console.log('========================================');
-    console.log(`Agencies: ${stats.agenciesFound}`);
-    console.log(`Agents: ${stats.agentsFound}`);
-    console.log(`Sales: ${stats.salesFound}`);
-    console.log(`Reviews: ${stats.reviewsFound}`);
-    if (stats.errors.length > 0) {
-      console.log(`Errors: ${stats.errors.length}`);
+    const duration = ((Date.now() - stats.startTime) / 1000).toFixed(1);
+    
+    if (!jsonMode) {
+      console.log('\n════════════════════════════════════════');
+      console.log('              Pipeline Complete');
+      console.log('════════════════════════════════════════');
+      console.log(`  Agencies: ${stats.agenciesFound}`);
+      console.log(`  Agents:   ${stats.agentsFound}`);
+      console.log(`  Sales:    ${stats.salesFound}`);
+      console.log(`  Reviews:  ${stats.reviewsFound}`);
+      console.log(`  Duration: ${duration}s`);
+      if (stats.errors.length > 0) {
+        console.log(`  Errors:   ${stats.errors.length}`);
+        for (const err of stats.errors) {
+          console.log(`    - ${err}`);
+        }
+      }
+      console.log('════════════════════════════════════════\n');
+    } else {
+      log('info', 'Complete', 'Pipeline finished', {
+        agencies: stats.agenciesFound,
+        agents: stats.agentsFound,
+        sales: stats.salesFound,
+        reviews: stats.reviewsFound,
+        duration: parseFloat(duration),
+        errors: stats.errors,
+      });
     }
+
   } finally {
     // Update pipeline run status
     if (runId && !config.dryRun) {
@@ -738,6 +1134,6 @@ async function runPipeline(config: CLIArgs): Promise<void> {
 
 const config = parseArgs();
 runPipeline(config).catch((error) => {
-  console.error('Pipeline failed:', error);
+  log('error', 'Fatal', error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

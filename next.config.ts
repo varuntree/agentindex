@@ -3,6 +3,9 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3", "drizzle-orm"],
+  outputFileTracingExcludes: {
+    "*": ["**/agent-ralph-ui/**"],
+  },
   // Exclude non-Next.js directories from webpack compilation
   webpack: (config) => {
     config.watchOptions = {

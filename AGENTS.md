@@ -81,3 +81,8 @@ ai_docs/                    # AI integration docs
 - ESLint 9: `eslint .` not `next lint`
 - FTS5 migrations: manual SQL via db.exec()
 - Next.js 15: params/searchParams are Promises — must await
+- `agent-ralph-ui/` is an internal Vite tool — **completely separate** from Next.js app
+  - NEVER import from agent-ralph-ui in Next.js code
+  - Must be excluded from: pnpm workspace, tsconfig.json, eslint, Next.js output tracing
+  - Run with its own commands from its directory, not via Next.js scripts
+  - If build breaks mentioning agent-ralph-ui: check workspace config, tsconfig exclude, eslint ignore, and next.config tracing excludes

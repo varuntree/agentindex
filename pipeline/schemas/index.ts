@@ -67,24 +67,25 @@ export type ReviewOutput = z.infer<typeof ReviewOutputSchema>;
 export const AgentOutputSchema = z.object({
   firstName: z.string().describe('Agent first name'),
   lastName: z.string().describe('Agent last name'),
-  email: z.string().email().optional().describe('Email address'),
-  phone: z.string().optional().describe('Office phone'),
-  mobilePhone: z.string().optional().describe('Mobile phone'),
-  photoUrl: z.string().url().optional().describe('Profile photo URL'),
-  licenseNumber: z.string().optional().describe('License number'),
+  email: z.string().email().optional().nullable().describe('Email address'),
+  phone: z.string().optional().nullable().describe('Office phone'),
+  mobilePhone: z.string().optional().nullable().describe('Mobile phone'),
+  photoUrl: z.string().url().optional().nullable().describe('Profile photo URL'),
+  licenseNumber: z.string().optional().nullable().describe('License number'),
   licenseStatus: z
     .enum(['active', 'suspended', 'cancelled', 'unknown'])
     .optional()
+    .nullable()
     .describe('License status'),
-  licenseState: z.string().optional().describe('Licensing state'),
-  bio: z.string().optional().describe('Agent biography'),
-  yearsActive: z.number().int().optional().describe('Years in industry'),
-  languagesSpoken: z.array(z.string()).optional().describe('Languages spoken'),
-  specializations: z.array(z.string()).optional().describe('Property specializations'),
-  suburbsServiced: z.array(z.string()).describe('Suburbs agent works in'),
-  sourceUrl: z.string().url().optional().describe('Agent profile URL'),
-  sales: z.array(SaleOutputSchema).optional().describe('Recent sales'),
-  reviews: z.array(ReviewOutputSchema).optional().describe('Agent reviews'),
+  licenseState: z.string().optional().nullable().describe('Licensing state'),
+  bio: z.string().optional().nullable().describe('Agent biography'),
+  yearsActive: z.number().int().optional().nullable().describe('Years in industry'),
+  languagesSpoken: z.array(z.string()).optional().nullable().describe('Languages spoken'),
+  specializations: z.array(z.string()).optional().nullable().describe('Property specializations'),
+  suburbsServiced: z.array(z.string()).default([]).describe('Suburbs agent works in'),
+  sourceUrl: z.string().url().optional().nullable().describe('Agent profile URL'),
+  sales: z.array(SaleOutputSchema).optional().nullable().describe('Recent sales'),
+  reviews: z.array(ReviewOutputSchema).optional().nullable().describe('Agent reviews'),
 });
 
 export type AgentOutput = z.infer<typeof AgentOutputSchema>;
@@ -94,20 +95,20 @@ export type AgentOutput = z.infer<typeof AgentOutputSchema>;
 // ---------------------------------------------------------------------------
 export const AgencyOutputSchema = z.object({
   name: z.string().describe('Agency name'),
-  brandName: z.string().optional().describe('Brand/franchise name'),
-  logoUrl: z.string().url().optional().describe('Agency logo URL'),
-  websiteUrl: z.string().url().optional().describe('Agency website'),
-  phone: z.string().optional().describe('Office phone'),
-  email: z.string().email().optional().describe('Contact email'),
-  streetAddress: z.string().optional().describe('Street address'),
+  brandName: z.string().optional().nullable().describe('Brand/franchise name'),
+  logoUrl: z.string().url().optional().nullable().describe('Agency logo URL'),
+  websiteUrl: z.string().url().optional().nullable().describe('Agency website'),
+  phone: z.string().optional().nullable().describe('Office phone'),
+  email: z.string().email().optional().nullable().describe('Contact email'),
+  streetAddress: z.string().optional().nullable().describe('Street address'),
   suburb: z.string().describe('Suburb location'),
   state: z.string().describe('State (NSW, VIC, etc)'),
   postcode: z.string().describe('4-digit postcode'),
-  lat: z.number().optional().describe('Latitude'),
-  lng: z.number().optional().describe('Longitude'),
-  description: z.string().optional().describe('Agency description'),
-  sourceUrl: z.string().url().optional().describe('Source URL'),
-  agents: z.array(AgentOutputSchema).describe('List of agents'),
+  lat: z.number().optional().nullable().describe('Latitude'),
+  lng: z.number().optional().nullable().describe('Longitude'),
+  description: z.string().optional().nullable().describe('Agency description'),
+  sourceUrl: z.string().url().optional().nullable().describe('Source URL'),
+  agents: z.array(AgentOutputSchema).default([]).describe('List of agents'),
 });
 
 export type AgencyOutput = z.infer<typeof AgencyOutputSchema>;

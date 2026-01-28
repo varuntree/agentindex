@@ -6,6 +6,7 @@ import {
   getAgentBySlug,
   getAgencyBySlug,
   getSuburbBySlug,
+  getTopAgentsInSuburb,
 } from '@/lib/db/queries';
 import {
   buildAgentContext,
@@ -283,12 +284,15 @@ async function fetchSuburbContext(slug?: string): Promise<SuburbVoiceContext | n
   const suburb = await getSuburbBySlug(slug);
   if (!suburb) return null;
 
+  // Fetch top agents serving this suburb
+  const topAgents = await getTopAgentsInSuburb(slug, 5);
+
   return {
     name: suburb.name,
     state: suburb.state,
     postcode: suburb.postcode,
     medianHousePrice12mo: suburb.medianHousePrice ?? undefined,
     medianApartmentPrice12mo: suburb.medianUnitPrice ?? undefined,
-    topAgents: [], // Would need additional query to get top agents in suburb
+    topAgents,
   };
 }

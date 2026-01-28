@@ -105,6 +105,7 @@ const states: StateData[] = [
 const legalLinks = [
   { label: 'Privacy Policy', href: '#' },
   { label: 'Terms of Service', href: '#' },
+  { label: 'Contact', href: 'mailto:hello@agentindex.com.au' },
 ];
 
 export function GlobalFooter() {
@@ -134,8 +135,20 @@ export function GlobalFooter() {
           ))}
         </div>
 
-        {/* Middle: powered by */}
-        <div className="mt-10 mb-8 text-center">
+        {/* About section */}
+        <div className="mt-10 mb-6 text-center max-w-2xl mx-auto">
+          <h3 className="font-heading font-bold text-lg mb-2">
+            Australia&apos;s Agent Directory
+          </h3>
+          <p className="text-sm text-gray-400 leading-relaxed">
+            AgentIndex helps Australians find the right real estate agent using verified sales data,
+            client reviews, and AI-powered voice assistants. Compare agents transparently
+            and make informed property decisions.
+          </p>
+        </div>
+
+        {/* Powered by */}
+        <div className="mb-8 text-center">
           <span className="font-accent text-voqo-lime">
             Powered by Voqo AI
           </span>

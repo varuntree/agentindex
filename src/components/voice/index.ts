@@ -8,3 +8,4 @@ export { VoicePanel } from './VoicePanel';
 export { VoiceButton } from './VoiceButton';
 export { AudioWaveform } from './AudioWaveform';
 export { VoiceContextSetter } from './VoiceContextSetter';
+export { HeroVoiceButton } from './HeroVoiceButton';

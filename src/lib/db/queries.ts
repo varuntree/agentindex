@@ -281,6 +281,18 @@ export async function getAgencyCount(filters?: {
   return result?.value ?? 0;
 }
 
+/** Get top agencies by sales count for carousel display */
+export async function getTopAgencies(limit: number = 8): Promise<Agency[]> {
+  const rows = db.query.agencies
+    .findMany({
+      orderBy: [desc(agencies.totalSalesCount)],
+      limit,
+    })
+    .sync();
+
+  return rows;
+}
+
 // ===========================================================================
 // Suburb queries
 // ===========================================================================

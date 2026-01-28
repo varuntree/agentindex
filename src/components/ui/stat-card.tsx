@@ -17,7 +17,7 @@ function StatCard({ icon: Icon, value, label, trend, className = "" }: StatCardP
       className={`bg-white border-2 border-black rounded-lg p-5 text-center ${className}`}
     >
       <Icon className="w-6 h-6 text-voqo-green mx-auto mb-2" />
-      <div className="text-3xl font-black text-black">{value}</div>
+      <div className="text-4xl font-black text-black">{value}</div>
       <div className="text-sm text-gray-500 mt-1">{label}</div>
       {trend && (
         <div

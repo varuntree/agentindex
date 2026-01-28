@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Search,
   Users,
   Building2,
   MapPin,
   TrendingUp,
-  Mic,
   ArrowRight,
 } from "lucide-react";
 import { SearchBar } from "@/components/search/search-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
-import { getSiteStats, getTopSuburbs } from "@/lib/db/queries";
-import { formatNumber } from "@/lib/utils/format";
+import { HeroVoiceButton } from "@/components/voice";
+import { getSiteStats, getTopSuburbs, getTopAgencies } from "@/lib/db/queries";
+import { formatNumber, formatCompactPrice } from "@/lib/utils/format";
 import { homeJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
 
 const BASE_URL = "https://agentindex.com.au";
@@ -64,8 +65,9 @@ const HOW_IT_WORKS = [
 ] as const;
 
 export default async function HomePage() {
-  const [stats, ...suburbResults] = await Promise.all([
+  const [stats, topAgencies, ...suburbResults] = await Promise.all([
     getSiteStats(),
+    getTopAgencies(8),
     ...FEATURED_STATES.map((state) => getTopSuburbs(state, 4)),
   ]);
 
@@ -74,6 +76,7 @@ export default async function HomePage() {
   );
 
   const hasSuburbs = allSuburbs.length > 0;
+  const hasAgencies = topAgencies.length > 0;
   const hasStats =
     stats.totalAgents > 0 ||
     stats.totalSuburbs > 0 ||
@@ -106,12 +109,51 @@ export default async function HomePage() {
             <SearchBar size="lg" />
           </div>
 
-          <p className="mt-4 text-sm text-gray-400 flex items-center justify-center gap-1.5">
-            <Mic className="w-4 h-4" />
-            Or ask our voice assistant
-          </p>
+          {/* Voice Navigator Button */}
+          <HeroVoiceButton />
         </div>
       </section>
+
+      {/* ----------------------------------------------------------------- */}
+      {/* Popular Agencies Carousel                                         */}
+      {/* ----------------------------------------------------------------- */}
+      {hasAgencies && (
+        <section className="py-12 border-b border-gray-200 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4">
+            <h2 className="font-heading text-2xl font-bold text-center mb-8">
+              Popular Agencies
+            </h2>
+
+            <div className="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
+              {topAgencies.map((agency) => (
+                <Link
+                  key={agency.id}
+                  href={`/agency/${agency.slug}`}
+                  className="group flex flex-col items-center gap-2 transition-transform hover:scale-105"
+                >
+                  {agency.logoUrl ? (
+                    <Image
+                      src={agency.logoUrl}
+                      alt={agency.name}
+                      width={96}
+                      height={48}
+                      className="h-12 w-auto object-contain grayscale group-hover:grayscale-0 transition-all"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="h-12 w-24 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-500 group-hover:text-voqo-green transition-colors">
+                    {agency.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ----------------------------------------------------------------- */}
       {/* Featured Suburbs                                                  */}
@@ -125,6 +167,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {allSuburbs.map((suburb) => {
               const stateSlug = suburb.state.toLowerCase();
+              const medianPrice = suburb.medianHousePrice ?? suburb.medianPrice;
 
               return (
                 <Link
@@ -136,10 +179,20 @@ export default async function HomePage() {
                       <h3 className="font-heading text-lg font-bold">
                         {suburb.name}
                       </h3>
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                        {suburb.state}
-                      </span>
-                      <p className="mt-2 text-sm text-gray-500 flex items-center gap-1">
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                          {suburb.state}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {suburb.postcode}
+                        </span>
+                      </div>
+                      {medianPrice && medianPrice > 0 && (
+                        <p className="mt-2 text-sm font-semibold text-voqo-green">
+                          {formatCompactPrice(medianPrice)}
+                        </p>
+                      )}
+                      <p className="mt-1 text-sm text-gray-500 flex items-center gap-1">
                         <Users className="w-3.5 h-3.5" />
                         {suburb.totalAgents ?? 0} agent
                         {(suburb.totalAgents ?? 0) !== 1 ? "s" : ""}
@@ -198,21 +251,31 @@ export default async function HomePage() {
         <div className="max-w-5xl mx-auto">
           {hasStats ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard
-                icon={Users}
-                value={formatNumber(stats.totalAgents)}
-                label="Total Agents"
-              />
-              <StatCard
-                icon={MapPin}
-                value={formatNumber(stats.totalSuburbs)}
-                label="Suburbs Covered"
-              />
-              <StatCard
-                icon={Building2}
-                value={formatNumber(stats.totalAgencies)}
-                label="Agencies"
-              />
+              <div className="relative">
+                <StatCard
+                  icon={Users}
+                  value={formatNumber(stats.totalAgents)}
+                  label="Total Agents"
+                />
+                {/* Green vertical separator (visible on md+) */}
+                <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-12 bg-voqo-green" />
+              </div>
+              <div className="relative">
+                <StatCard
+                  icon={MapPin}
+                  value={formatNumber(stats.totalSuburbs)}
+                  label="Suburbs Covered"
+                />
+                <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-12 bg-voqo-green" />
+              </div>
+              <div className="relative">
+                <StatCard
+                  icon={Building2}
+                  value={formatNumber(stats.totalAgencies)}
+                  label="Agencies"
+                />
+                <div className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-12 bg-voqo-green" />
+              </div>
               <StatCard
                 icon={TrendingUp}
                 value={formatNumber(stats.totalSales)}

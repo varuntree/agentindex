@@ -1,3 +1,9 @@
+## Agent Instructions
+
+> **prompt_build** and **prompt_plan**: Read `AGENTS.md` at the beginning of every conversation before taking any action. This document contains critical build fixes, gotchas, and patterns that prevent repeated mistakes.
+
+---
+
 ## Build & Run
 
 - Install: `pnpm install`
@@ -86,3 +92,35 @@ ai_docs/                    # AI integration docs
   - Must be excluded from: pnpm workspace, tsconfig.json, eslint, Next.js output tracing
   - Run with its own commands from its directory, not via Next.js scripts
   - If build breaks mentioning agent-ralph-ui: check workspace config, tsconfig exclude, eslint ignore, and next.config tracing excludes
+
+## Build Issues & Fixes
+
+### NODE_ENV Must Be Standard
+- Only use `development`, `production`, or `test` for NODE_ENV
+- Non-standard values cause: webpack chunk ID mismatches, corrupted build cache, race conditions in output tracing
+- Symptoms: `Cannot find module './15.js'`, `pages-manifest.json` not found, `.nft.json` errors
+- Fix: Unset or correct NODE_ENV before running `pnpm build`
+
+### Third-Party Browser Libraries in SSR
+- Libraries using browser APIs (WebSocket, MediaDevices, etc.) fail during static generation
+- Symptoms: `Cannot read properties of null (reading 'useRef')` during prerender
+- Fix: Use dynamic import with `ssr: false`:
+  ```tsx
+  const Component = dynamic(() => import('./Component'), { ssr: false });
+  ```
+- Applied to: `@elevenlabs/react` in VoiceLayoutWrapper
+
+### Client Directive for React APIs
+- Components using `forwardRef`, `useRef`, `useState`, etc. need `'use client'`
+- Even if they don't use hooks directly, React APIs require client context
+- Fix: Add `'use client'` at top of file
+
+### Corrupted .next Cache
+- Strange webpack/bundling errors often caused by stale cache
+- Symptoms: Missing chunks, module not found, inconsistent builds
+- Fix: `rm -rf .next && pnpm build`
+
+### pnpm-workspace.yaml Syntax
+- Must be valid YAML with proper structure
+- `onlyBuiltDependencies` belongs in `package.json` under `pnpm` key, NOT in workspace file
+- Workspace file is for defining package patterns only

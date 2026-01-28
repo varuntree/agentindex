@@ -123,10 +123,10 @@ export function SearchBar({
         return;
       }
 
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setResults(json.data);
-        setIsOpen(json.data.length > 0 || q.length >= 2);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setResults(data);
+        setIsOpen(data.length > 0 || q.length >= 2);
         setHighlightIndex(-1);
       }
     } catch (e) {

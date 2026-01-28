@@ -8,6 +8,8 @@ import {
   MapPin,
   TrendingUp,
   ArrowRight,
+  BarChart3,
+  Mic,
 } from "lucide-react";
 import { SearchBar } from "@/components/search/search-bar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,16 +53,16 @@ const HOW_IT_WORKS = [
       "Search by suburb, agency, or agent name. Filter by property type, sales volume, and ratings to find the right match.",
   },
   {
-    icon: TrendingUp,
-    title: "Compare",
+    icon: BarChart3,
+    title: "Browse Data",
     description:
-      "Review verified sales history, median prices, days on market, and client reviews side-by-side.",
+      "Review verified sales history, median prices, days on market, and client reviews to make informed decisions.",
   },
   {
-    icon: Users,
-    title: "Connect",
+    icon: Mic,
+    title: "Talk",
     description:
-      "Reach out directly to top-performing agents who specialise in your area and property type.",
+      "Use our voice navigator to find agents or talk directly to an agent's AI assistant for instant answers.",
   },
 ] as const;
 

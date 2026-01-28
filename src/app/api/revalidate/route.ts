@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     if (!secret || authHeader !== `Bearer ${secret}`) {
       return NextResponse.json(
-        { success: false, error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
+        { error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
         { status: 401 }
       );
     }
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     if (!body || !Array.isArray(body.paths) || body.paths.length === 0) {
       return NextResponse.json(
-        { success: false, error: { message: 'paths array is required', code: 'BAD_REQUEST' } },
+        { error: { message: 'paths array is required', code: 'BAD_REQUEST' } },
         { status: 400 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, data: { revalidated } },
+      { revalidated },
       { status: 200, headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (e) {

@@ -68,17 +68,16 @@ export const navigatorTools: ClientToolsMap = {
       const { query } = params as { query: string };
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-
-        if (!data.success) {
+        if (!res.ok) {
           return JSON.stringify({ error: 'Search failed' });
         }
+        const data = await res.json();
 
         return JSON.stringify({
-          agents_found: data.data?.agents?.length ?? 0,
-          agencies_found: data.data?.agencies?.length ?? 0,
-          suburbs_found: data.data?.suburbs?.length ?? 0,
-          top_results: (data.data?.agents ?? [])
+          agents_found: data?.agents?.length ?? 0,
+          agencies_found: data?.agencies?.length ?? 0,
+          suburbs_found: data?.suburbs?.length ?? 0,
+          top_results: (data?.agents ?? [])
             .slice(0, 3)
             .map((a: Record<string, unknown>) => ({
               name: a.full_name,

@@ -43,7 +43,7 @@ None. All blocking items resolved.
 
 ### API Response Shape (affects all consumers)
 
-- [ ] **4.5** — All endpoints: Flatten responses (remove `{success,data}` wrapper, return data directly)
+- [x] **4.5** — All endpoints: Flatten responses (remove `{success,data}` wrapper, return data directly)
 - [ ] **4.6** — `/api/agents`: Fix sort param values (spec: `sales_count`/`avg_price`/`name`; impl: `rating`/`sales`/`name`/`quality`)
 - [ ] **4.7** — `/api/agents`: Add `suburb` context object when filtering by suburb
 - [ ] **4.8** — `/api/agents`: Fix pagination field name (`totalPages` → `pages` per spec)
@@ -73,7 +73,7 @@ None. All blocking items resolved.
 - [x] **6.1.2** — Suburb cards: Add median price + postcode display
 - [x] **6.1.3** — Hero: Add Voice Navigator button ("Ask me to find an agent")
 - [x] **6.1.4** — Stats: Add green vertical separators between stats
-- [ ] **6.1.5** — How It Works: Rename steps to match spec (Search/Browse Data/Talk vs Search/Compare/Connect)
+- [x] **6.1.5** — How It Works: Rename steps to match spec (Search/Browse Data/Talk vs Search/Compare/Connect)
 
 **Playwright verify:** Navigate to `/`, screenshot, verify carousel + suburb card fields + voice button.
 

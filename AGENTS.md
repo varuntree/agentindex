@@ -127,9 +127,21 @@ ai_docs/                    # AI integration docs
 
 ### @next/swc Version Mismatch
 - Symptoms: `TypeError: a[d] is not a function` during prerender, cryptic webpack-runtime.js errors
-- Cause: pnpm-lock.yaml pins @next/swc to wrong version after partial updates
-- Fix: Full clean reinstall: `rm -rf node_modules .next pnpm-lock.yaml && pnpm install`
-- Warning appears in build output: `Mismatching @next/swc version`
+- Cause: Next.js minor versions sometimes released without matching @next/swc packages on npm
+- Warning: `Mismatching @next/swc version, detected: X while Next.js is on Y`
+- Fix:
+  1. Pin `next` to exact version with matching swc (e.g., `"next": "15.5.7"` not `"^15.1.0"`)
+  2. Pin `eslint-config-next` to same version
+  3. Add pnpm overrides in package.json if needed:
+     ```json
+     "pnpm": {
+       "overrides": {
+         "next": "15.5.7",
+         "eslint-config-next": "15.5.7"
+       }
+     }
+     ```
+  4. Clean reinstall: `rm -rf node_modules .next pnpm-lock.yaml && pnpm install`
 
 ### Client Component Wrappers (CRITICAL)
 - **NEVER import voice/nav components directly in server components**
@@ -157,3 +169,23 @@ import { GlobalNavWrapper } from "@/components/navigation/GlobalNavWrapper";
 - `VoiceContextSetter` → use `VoiceContextSetterWrapper`
 
 Wrappers use `dynamic(() => import(...), { ssr: false })` to prevent SSR execution.
+
+### Browser API Files Need 'use client'
+- Files using `window`, `document`, `navigator` must have `'use client'` directive
+- Even if only used in handlers/callbacks, the directive is required
+- Example: `src/lib/voice/tools.ts` uses `window.location`, needs `'use client'`
+- Without it, Next.js may try to execute during SSR/prerender
+
+### ESLint Ignores for Generated Folders
+- `.next/` and `.next-server-debug/` contain generated code
+- Must be in `eslint.config.mjs` ignores to prevent false errors
+- Current ignores: `agent-ralph-ui/**`, `.next/**`, `.next-server-debug/**`, `drizzle/**`, `pipeline/**`
+
+### Nuclear Option: Full Clean Rebuild
+When builds fail with cryptic errors, try this sequence:
+```bash
+rm -rf node_modules .next .next-server-debug pnpm-lock.yaml
+pnpm install
+pnpm build
+```
+This resolves: corrupted caches, version mismatches, stale lockfiles.

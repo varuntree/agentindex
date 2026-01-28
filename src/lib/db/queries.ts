@@ -67,6 +67,73 @@ export async function getAgentBySlug(
   } as unknown as AgentWithRelations;
 }
 
+export interface AgentComputedStats {
+  total_sales_count: number;
+  avg_sale_price: number | null;
+  min_sale_price: number | null;
+  max_sale_price: number | null;
+  median_sale_price: number | null;
+  sales_last_12_months: number;
+  sales_last_6_months: number;
+  avg_days_on_market: number | null;
+  avg_rating: number | null;
+  review_count: number;
+}
+
+export async function getAgentComputedStats(agentId: number): Promise<AgentComputedStats> {
+  const now = Date.now();
+  const sixMonthsAgo = now - 6 * 30 * 24 * 60 * 60 * 1000;
+  const twelveMonthsAgo = now - 12 * 30 * 24 * 60 * 60 * 1000;
+
+  // Get all sales for this agent
+  const allSales = sqliteDb
+    .prepare(
+      `SELECT sale_price, days_on_market, sale_date FROM sales WHERE agent_id = ?`
+    )
+    .all(agentId) as { sale_price: number | null; days_on_market: number | null; sale_date: string | null }[];
+
+  // Get agent base stats
+  const agentRow = sqliteDb
+    .prepare(`SELECT ratings_average, ratings_count, total_sales_count, median_sale_price FROM agents WHERE id = ?`)
+    .get(agentId) as { ratings_average: number | null; ratings_count: number | null; total_sales_count: number | null; median_sale_price: number | null } | undefined;
+
+  // Calculate price stats
+  const prices = allSales.map((s) => s.sale_price).filter((p): p is number => p != null);
+  const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+  const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : null;
+
+  // Calculate days on market average
+  const doms = allSales.map((s) => s.days_on_market).filter((d): d is number => d != null);
+  const avgDom = doms.length > 0 ? Math.round(doms.reduce((a, b) => a + b, 0) / doms.length) : null;
+
+  // Count recent sales
+  const salesLast12mo = allSales.filter((s) => {
+    if (!s.sale_date) return false;
+    const saleTime = new Date(s.sale_date).getTime();
+    return saleTime >= twelveMonthsAgo;
+  }).length;
+
+  const salesLast6mo = allSales.filter((s) => {
+    if (!s.sale_date) return false;
+    const saleTime = new Date(s.sale_date).getTime();
+    return saleTime >= sixMonthsAgo;
+  }).length;
+
+  return {
+    total_sales_count: agentRow?.total_sales_count ?? allSales.length,
+    avg_sale_price: avgPrice ? Math.round(avgPrice) : null,
+    min_sale_price: minPrice,
+    max_sale_price: maxPrice,
+    median_sale_price: agentRow?.median_sale_price ?? null,
+    sales_last_12_months: salesLast12mo,
+    sales_last_6_months: salesLast6mo,
+    avg_days_on_market: avgDom,
+    avg_rating: agentRow?.ratings_average ?? null,
+    review_count: agentRow?.ratings_count ?? 0,
+  };
+}
+
 export async function getAgentsList(filters: {
   suburb?: string;
   agency?: string;

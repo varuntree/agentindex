@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAgentBySlug } from '@/lib/db/queries';
+import { getAgentBySlug, getAgentComputedStats } from '@/lib/db/queries';
 import { success, notFound, serverError } from '@/lib/api/response';
 import { cacheHeaders, CACHE_PROFILE } from '@/lib/api/cache';
 
@@ -15,7 +15,10 @@ export async function GET(
       return notFound('Agent not found');
     }
 
-    const response = success(agent);
+    // Compute stats from sales data
+    const stats = await getAgentComputedStats(agent.id);
+
+    const response = success({ ...agent, stats });
     const headers = cacheHeaders(CACHE_PROFILE);
     for (const [key, value] of Object.entries(headers)) {
       response.headers.set(key, value);

@@ -56,7 +56,7 @@ None. All blocking items resolved.
 
 - [x] **3.5.1** — `getSuburbMarketStats`: Add YoY price change, clearance rate, rental yield, avg days on market
 - [x] **3.5.2** — `getSuburbMarketStats`: Add demographics (population, median_age, median_income)
-- [ ] **3.5.3** — Agent profile: Add computed stats object (median_sale_price, avg_days_on_market, sales_last_6_months, min/max_sale_price)
+- [x] **3.5.3** — Agent profile: Add computed stats object (median_sale_price, avg_days_on_market, sales_last_6_months, min/max_sale_price)
 - [ ] **3.5.4** — `getAgencyBySlug`: Return logoUrl, avgSalePrice, topSuburbs array, market_share_suburb
 - [ ] **3.5.5** — Agency: Add recent_sales query with agent attribution (not agent aggregates)
 - [ ] **3.5.6** — Agent list: Add per-suburb sales stats (sales_count_suburb, avg_sale_price_suburb)

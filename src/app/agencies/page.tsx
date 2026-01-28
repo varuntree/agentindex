@@ -17,6 +17,10 @@ export function generateMetadata(): Metadata {
     title: "Real Estate Agencies in Australia | AgentIndex",
     description:
       "Browse real estate agencies across Australia. Find agencies by state, view agent rosters and sales history.",
+    alternates: {
+      // Canonical always points to base page (no pagination/filter params)
+      canonical: `${BASE_URL}/agencies`,
+    },
   };
 }
 

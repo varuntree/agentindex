@@ -48,6 +48,9 @@ export async function generateMetadata({
   return {
     title: `${agency.name} - Real Estate Agency | AgentIndex`,
     description: `${agency.name} has ${agency.totalAgents ?? 0} agents and ${formatNumber(agency.totalSalesCount ?? 0)} total sales.`,
+    alternates: {
+      canonical: `${BASE_URL}/agency/${slug}`,
+    },
   };
 }
 

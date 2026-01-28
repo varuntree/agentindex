@@ -11,6 +11,9 @@ const BASE_URL = "https://agentindex.com.au";
 
 export const metadata: Metadata = {
   title: "Real Estate Agents by State",
+  alternates: {
+    canonical: `${BASE_URL}/agents`,
+  },
 };
 
 const STATES: Record<string, string> = {

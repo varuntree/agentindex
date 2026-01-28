@@ -68,6 +68,9 @@ export async function generateMetadata({
   return {
     title: `${agent.fullName} - Real Estate Agent in ${suburbName} | AgentIndex`,
     description: `View ${agent.fullName}'s sales history, reviews, and performance stats. ${agent.totalSalesCount ?? 0} properties sold.`,
+    alternates: {
+      canonical: `${BASE_URL}/agent/${slug}`,
+    },
   };
 }
 

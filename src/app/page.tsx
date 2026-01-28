@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Search,
@@ -15,6 +16,14 @@ import { StatCard } from "@/components/ui/stat-card";
 import { getSiteStats, getTopSuburbs } from "@/lib/db/queries";
 import { formatNumber } from "@/lib/utils/format";
 import { homeJsonLd } from "@/lib/seo/jsonld";
+
+const BASE_URL = "https://agentindex.com.au";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: BASE_URL,
+  },
+};
 
 export const revalidate = 3600;
 

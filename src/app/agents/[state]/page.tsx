@@ -42,6 +42,10 @@ export async function generateMetadata({
 
   return {
     title: `Real Estate Agents in ${fullName}`,
+    alternates: {
+      // Canonical always points to page 1 (no pagination params)
+      canonical: `${BASE_URL}/agents/${state}`,
+    },
   };
 }
 

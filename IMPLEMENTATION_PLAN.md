@@ -30,7 +30,7 @@ Build status: typecheck + lint + build all pass (21 routes)
 ## Remaining Work
 
 ### Phase 7 remaining: SEO
-- [ ] **7.9** — Canonical tags: self-referencing every page; paginated/sorted → canonical = page 1 default sort
+- [x] **7.9** — Canonical tags: self-referencing every page; paginated/sorted → canonical = page 1 default sort ✓
 - [ ] **7.10** — OG image generation via @vercel/og (agent/suburb/agency variants, 1200x630)
 - [ ] **7.11** — Internal linking audit: verify link density
 

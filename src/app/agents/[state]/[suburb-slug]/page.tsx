@@ -52,6 +52,10 @@ export async function generateMetadata({
 
   return {
     title: `Real Estate Agents in ${suburb.name}, ${state.toUpperCase()}`,
+    alternates: {
+      // Canonical always points to page 1 default sort (no query params)
+      canonical: `${BASE_URL}/agents/${state}/${suburbSlug}`,
+    },
   };
 }
 

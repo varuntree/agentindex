@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { broadcast } from "./ws.js";
-import type { LoopState, SdkMessagePayload, ContentBlock } from "./types.js";
+import type { LoopState, WsEvent, SdkMessagePayload, ContentBlock } from "./types.js";
 
 const execAsync = promisify(exec);
 
@@ -23,6 +23,18 @@ let state: LoopState = {
 
 let abortController: AbortController | null = null;
 
+// Event buffer for replay on reconnect
+let eventHistory: WsEvent[] = [];
+
+function emit(event: WsEvent) {
+  eventHistory.push(event);
+  broadcast(event);
+}
+
+export function getEventHistory(): WsEvent[] {
+  return eventHistory;
+}
+
 export function getState(): LoopState {
   return { ...state };
 }
@@ -30,18 +42,21 @@ export function getState(): LoopState {
 export function stopLoop() {
   state.running = false;
   abortController?.abort();
-  broadcast({ type: "loop:complete", reason: "stopped" });
+  emit({ type: "loop:complete", reason: "stopped" });
 }
 
 function parseContentBlocks(content: unknown[]): ContentBlock[] {
   if (!Array.isArray(content)) return [];
-  return content.map((block: Record<string, unknown>) => ({
-    type: block.type as ContentBlock["type"],
-    text: block.text as string | undefined,
-    id: block.id as string | undefined,
-    name: block.name as string | undefined,
-    input: block.input as Record<string, unknown> | undefined,
-  }));
+  return content.map((raw: unknown) => {
+    const block = raw as Record<string, unknown>;
+    return {
+      type: block.type as ContentBlock["type"],
+      text: block.text as string | undefined,
+      id: block.id as string | undefined,
+      name: block.name as string | undefined,
+      input: block.input as Record<string, unknown> | undefined,
+    };
+  });
 }
 
 function toMessagePayload(msg: Record<string, unknown>): SdkMessagePayload {
@@ -83,13 +98,13 @@ function toMessagePayload(msg: Record<string, unknown>): SdkMessagePayload {
 }
 
 async function gitPush() {
-  broadcast({ type: "git:push:start" });
+  emit({ type: "git:push:start" });
   try {
     const { stdout } = await execAsync("git push origin $(git branch --show-current)", {
       cwd: PROJECT_ROOT,
     });
     console.log("[git] push:", stdout.trim());
-    broadcast({ type: "git:push:complete", success: true });
+    emit({ type: "git:push:complete", success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[git] push failed:", message);
@@ -98,16 +113,16 @@ async function gitPush() {
       await execAsync("git push -u origin $(git branch --show-current)", {
         cwd: PROJECT_ROOT,
       });
-      broadcast({ type: "git:push:complete", success: true });
+      emit({ type: "git:push:complete", success: true });
     } catch {
-      broadcast({ type: "git:push:complete", success: false, error: message });
+      emit({ type: "git:push:complete", success: false, error: message });
     }
   }
 }
 
 export async function startLoop(mode: "plan" | "build", maxIterations: number) {
   if (state.running) {
-    broadcast({ type: "error", message: "Loop already running" });
+    emit({ type: "error", message: "Loop already running" });
     return;
   }
 
@@ -116,7 +131,7 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
   try {
     promptContent = readFileSync(resolve(PROMPT_DIR, promptFile), "utf-8");
   } catch (err) {
-    broadcast({
+    emit({
       type: "error",
       message: `Failed to read ${promptFile}: ${err instanceof Error ? err.message : err}`,
     });
@@ -132,8 +147,9 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
     totalDurationMs: 0,
   };
   abortController = new AbortController();
+  eventHistory = [];
 
-  broadcast({ type: "loop:start", mode, maxIterations });
+  emit({ type: "loop:start", mode, maxIterations });
   console.log(`[ralph] starting ${mode} mode, max iterations: ${maxIterations || "unlimited"}`);
 
   try {
@@ -142,12 +158,12 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
 
     while (state.running) {
       if (maxIterations > 0 && state.iteration >= maxIterations) {
-        broadcast({ type: "loop:complete", reason: "max_iterations" });
+        emit({ type: "loop:complete", reason: "max_iterations" });
         break;
       }
 
       state.iteration++;
-      broadcast({ type: "iteration:start", iteration: state.iteration });
+      emit({ type: "iteration:start", iteration: state.iteration });
       console.log(`[ralph] iteration ${state.iteration}`);
 
       const q = query({
@@ -170,7 +186,7 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
           for (const block of payload.content) {
             if (block.type === "tool_use" && block.name === "Task" && block.id) {
               const input = block.input || {};
-              broadcast({
+              emit({
                 type: "subagent:start",
                 agentId: block.id,
                 agentType: (input.subagent_type as string) || "unknown",
@@ -180,7 +196,7 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
           }
         }
 
-        broadcast({ type: "sdk:message", message: payload });
+        emit({ type: "sdk:message", message: payload });
 
         // Iteration complete
         if (payload.messageType === "result") {
@@ -188,7 +204,7 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
           const duration = payload.durationMs || 0;
           state.totalCostUsd += cost;
           state.totalDurationMs += duration;
-          broadcast({
+          emit({
             type: "iteration:complete",
             iteration: state.iteration,
             cost,
@@ -207,12 +223,12 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
   } catch (err) {
     if (abortController?.signal.aborted) {
       console.log("[ralph] aborted");
-      broadcast({ type: "loop:complete", reason: "stopped" });
+      emit({ type: "loop:complete", reason: "stopped" });
     } else {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[ralph] error:", message);
-      broadcast({ type: "error", message });
-      broadcast({ type: "loop:complete", reason: "error" });
+      emit({ type: "error", message });
+      emit({ type: "loop:complete", reason: "error" });
     }
   } finally {
     state.running = false;

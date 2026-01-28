@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 import type { WsEvent } from "./types.js";
+import { getEventHistory } from "./ralph.js";
 
 let wss: WebSocketServer;
 
@@ -9,6 +10,15 @@ export function setupWebSocket(server: Server) {
 
   wss.on("connection", (ws) => {
     console.log("[ws] client connected");
+
+    // Replay event history so reconnecting clients restore full state
+    const history = getEventHistory();
+    for (const event of history) {
+      ws.send(JSON.stringify(event));
+    }
+    if (history.length > 0) {
+      console.log(`[ws] replayed ${history.length} events`);
+    }
 
     ws.on("close", () => {
       console.log("[ws] client disconnected");

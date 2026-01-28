@@ -2,14 +2,27 @@
  * ElevenLabs API helpers (server-side only)
  */
 
+import { randomUUID } from 'crypto';
+
 interface SignedUrlOptions {
   systemPrompt: string;
   variables: Record<string, unknown>;
   firstMessage: string;
 }
 
-interface SignedUrlResponse {
+interface ElevenLabsSignedUrlResponse {
   signed_url: string;
+}
+
+export interface SignedUrlResult {
+  signedUrl: string;
+  sessionId: string;
+  expiresAt: string;
+  overrides: {
+    prompt: { prompt: string };
+    first_message: string;
+    variables: Record<string, unknown>;
+  };
 }
 
 /**
@@ -18,7 +31,7 @@ interface SignedUrlResponse {
  */
 export async function createSignedUrl(
   options: SignedUrlOptions
-): Promise<string> {
+): Promise<SignedUrlResult> {
   const { systemPrompt, variables, firstMessage } = options;
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
@@ -32,12 +45,14 @@ export async function createSignedUrl(
     throw new Error('ELEVENLABS_AGENT_ID is not configured');
   }
 
+  // POST to ElevenLabs signed URL endpoint (hyphenated path)
   const response = await fetch(
-    `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
     {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'xi-api-key': apiKey,
+        'Content-Type': 'application/json',
       },
     }
   );
@@ -47,12 +62,15 @@ export async function createSignedUrl(
     throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
   }
 
-  const data = (await response.json()) as SignedUrlResponse;
+  const data = (await response.json()) as ElevenLabsSignedUrlResponse;
 
-  // The signed URL already contains the agent config
-  // We need to add overrides via the session start on client side
-  // Return the URL with override data encoded
-  const overrideData = {
+  // Generate session tracking info
+  const sessionId = randomUUID();
+  // Signed URLs expire in 5 minutes per ElevenLabs docs
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+  // Build overrides for client-side session start
+  const overrides = {
     prompt: {
       prompt: systemPrompt,
     },
@@ -60,12 +78,12 @@ export async function createSignedUrl(
     variables,
   };
 
-  // Store override data in a way the client can use
-  // The client will pass these when starting the session
-  return JSON.stringify({
+  return {
     signedUrl: data.signed_url,
-    overrides: overrideData,
-  });
+    sessionId,
+    expiresAt,
+    overrides,
+  };
 }
 
 /**

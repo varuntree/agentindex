@@ -71,18 +71,15 @@ export function VoiceProvider({
 
   const conversation = useConversation({
     onConnect: () => {
-      console.log('[Voice] Connected');
       setStatus('connected');
     },
     onDisconnect: () => {
-      console.log('[Voice] Disconnected');
       setStatus('idle');
     },
-    onMessage: (message) => {
-      console.log('[Voice] Message:', message);
+    onMessage: () => {
+      // Handle incoming messages (transcript, etc.)
     },
     onError: (err: unknown) => {
-      console.error('[Voice] Error:', err);
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage || 'An error occurred');
       setStatus('error');
@@ -93,7 +90,6 @@ export function VoiceProvider({
   useEffect(() => {
     if (status === 'connected') {
       const timeout = setTimeout(() => {
-        console.log('[Voice] Session timeout reached');
         conversation.endSession();
         setStatus('idle');
       }, MAX_SESSION_DURATION);
@@ -133,18 +129,8 @@ export function VoiceProvider({
           throw new Error(data.error || 'Failed to get signed URL');
         }
 
-        // Parse the response (contains signedUrl and overrides)
-        let signedUrl: string;
-        let overrides: Record<string, unknown> | undefined;
-
-        try {
-          const parsed = JSON.parse(data.signedUrl);
-          signedUrl = parsed.signedUrl;
-          overrides = parsed.overrides;
-        } catch {
-          // If not JSON, use directly (backwards compat)
-          signedUrl = data.signedUrl;
-        }
+        // Response format: { signedUrl, sessionId, expiresAt, overrides }
+        const { signedUrl, overrides } = data;
 
         if (!signedUrl) {
           throw new Error('Voice service not configured');
@@ -167,7 +153,6 @@ export function VoiceProvider({
           overrides,
         });
       } catch (err) {
-        console.error('[Voice] Start session error:', err);
         setError(
           err instanceof Error ? err.message : 'Failed to start session'
         );
@@ -181,7 +166,6 @@ export function VoiceProvider({
   useEffect(() => {
     const handleModeChange = (e: CustomEvent<{ mode: VoiceMode; slug: string }>) => {
       const { mode } = e.detail;
-      console.log('[Voice] Mode change requested:', mode);
 
       conversation.endSession().then(() => {
         setVoiceMode(mode);

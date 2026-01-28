@@ -179,15 +179,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate signed URL
-    const signedUrl = await createSignedUrl({
+    // Generate signed URL with session info
+    const result = await createSignedUrl({
       systemPrompt,
       variables,
       firstMessage,
     });
 
+    // Return per spec: signedUrl, sessionId, expiresAt (+ overrides for client)
     return NextResponse.json(
-      { signedUrl },
+      {
+        signedUrl: result.signedUrl,
+        sessionId: result.sessionId,
+        expiresAt: result.expiresAt,
+        overrides: result.overrides,
+      },
       {
         status: 200,
         headers: { 'Cache-Control': 'no-store' },

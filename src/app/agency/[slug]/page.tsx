@@ -21,6 +21,7 @@ import {
   formatDate,
 } from "@/lib/utils/format";
 import { breadcrumbJsonLd, agencyJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
+import { VoiceContextSetter } from "@/components/voice";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -127,6 +128,10 @@ export default async function AgencyProfilePage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(agencyData) }}
       />
+
+      {/* Set voice context for personalized button label */}
+      <VoiceContextSetter name={agency.name} />
+
       <Breadcrumb
         items={[
           { label: "Agencies", href: "/agencies" },

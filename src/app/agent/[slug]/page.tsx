@@ -38,6 +38,7 @@ import {
   formatPercentage,
 } from "@/lib/utils/format";
 import { breadcrumbJsonLd, agentJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
+import { VoiceContextSetter } from "@/components/voice";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -149,6 +150,10 @@ export default async function AgentProfilePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(agentData) }}
       />
+
+      {/* Set voice context for personalized button label */}
+      <VoiceContextSetter name={agent.fullName} />
+
       <Breadcrumb
         items={[
           { label: "Agents", href: "/agents" },

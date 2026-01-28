@@ -18,14 +18,18 @@ import type {
   AgentVoiceContext,
   AgencyVoiceContext,
   SuburbVoiceContext,
+  VoiceEntityInfo,
 } from '@/lib/voice/types';
 
 interface VoiceContextValue {
   status: VoiceStatus;
   voiceMode: VoiceMode;
+  pageType: PageType;
   setVoiceMode: (mode: VoiceMode) => void;
   startSession: () => Promise<void>;
   endSession: () => Promise<void>;
+  entityInfo: VoiceEntityInfo | null;
+  setEntityInfo: (info: VoiceEntityInfo | null) => void;
 }
 
 const VoiceContext = createContext<VoiceContextValue | null>(null);
@@ -63,6 +67,7 @@ export function VoiceProvider({
   const [status, setStatus] = useState<VoiceStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<VoiceMode>(defaultMode);
+  const [entityInfo, setEntityInfo] = useState<VoiceEntityInfo | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -211,9 +216,12 @@ export function VoiceProvider({
   const contextValue: VoiceContextValue = {
     status,
     voiceMode,
+    pageType,
     setVoiceMode,
     startSession,
     endSession,
+    entityInfo,
+    setEntityInfo,
   };
 
   return (
@@ -227,6 +235,8 @@ export function VoiceProvider({
           isSpeaking={conversation.isSpeaking}
           error={error}
           voiceMode={voiceMode}
+          pageType={pageType}
+          entityInfo={entityInfo}
           onStart={startSession}
           onEnd={endSession}
         />

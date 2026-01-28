@@ -16,6 +16,7 @@ import {
 } from "@/lib/db/queries";
 import { formatNumber, formatCurrency } from "@/lib/utils/format";
 import { breadcrumbJsonLd, suburbJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
+import { VoiceContextSetter } from "@/components/voice";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -158,6 +159,10 @@ export default async function SuburbPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(suburbData) }}
       />
+
+      {/* Set voice context for personalized button label */}
+      <VoiceContextSetter name={suburb.name} />
+
       <Breadcrumb
         items={[
           { label: "Agents", href: "/agents" },

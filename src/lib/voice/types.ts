@@ -120,3 +120,8 @@ export type DynamicVariables =
   | AgentAssistantVariables
   | AgencyAssistantVariables
   | SuburbAssistantVariables;
+
+export interface VoiceEntityInfo {
+  name: string;
+  assistantLabel?: string;
+}

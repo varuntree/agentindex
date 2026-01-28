@@ -2,15 +2,53 @@
 
 import { Mic, Volume2, X, Loader, AlertCircle } from 'lucide-react';
 import { AudioWaveform } from './AudioWaveform';
-import type { VoiceStatus, VoiceMode } from '@/lib/voice/types';
+import type { VoiceStatus, VoiceMode, PageType, VoiceEntityInfo } from '@/lib/voice/types';
 
 interface VoicePanelProps {
   status: VoiceStatus;
   isSpeaking: boolean;
   error: string | null;
   voiceMode: VoiceMode;
+  pageType: PageType;
+  entityInfo: VoiceEntityInfo | null;
   onStart: () => void;
   onEnd: () => void;
+}
+
+/**
+ * Build assistant button label based on page type and entity info
+ */
+function getAssistantLabel(pageType: PageType, entityInfo: VoiceEntityInfo | null): string {
+  // Use custom label if provided
+  if (entityInfo?.assistantLabel) {
+    return entityInfo.assistantLabel;
+  }
+
+  // Build default label from entity name and page type
+  if (entityInfo?.name) {
+    switch (pageType) {
+      case 'agent':
+        return `Talk to ${entityInfo.name.split(' ')[0]}'s Assistant`;
+      case 'agency':
+        return `Talk to ${entityInfo.name} Receptionist`;
+      case 'suburb':
+        return `${entityInfo.name} Local Expert`;
+      default:
+        return 'Talk to Assistant';
+    }
+  }
+
+  // Fallback labels when no entity info
+  switch (pageType) {
+    case 'agent':
+      return "Talk to Agent's Assistant";
+    case 'agency':
+      return 'Talk to Receptionist';
+    case 'suburb':
+      return 'Talk to Local Expert';
+    default:
+      return 'Talk to Assistant';
+  }
 }
 
 /**
@@ -21,11 +59,15 @@ export function VoicePanel({
   isSpeaking,
   error,
   voiceMode,
+  pageType,
+  entityInfo,
   onStart,
   onEnd,
 }: VoicePanelProps) {
   const buttonLabel =
-    voiceMode === 'navigator' ? 'Talk to Navigator' : 'Talk to Assistant';
+    voiceMode === 'navigator'
+      ? 'Talk to Navigator'
+      : getAssistantLabel(pageType, entityInfo);
 
   // Idle state - show floating button
   if (status === 'idle') {

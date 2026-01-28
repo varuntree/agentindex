@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Home, Building2, Users, MapPin } from "lucide-react";
+import { Home, Building2, Users, MapPin, Clock, TrendingUp, BarChart3, Mic } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -174,12 +174,24 @@ export default async function SuburbPage({
         className="mb-6"
       />
 
-      <h1 className="font-heading text-3xl md:text-4xl font-black mb-6">
-        Real Estate Agents in {suburb.name}, {state.toUpperCase()}
-      </h1>
+      {/* Header with postcode */}
+      <div className="mb-6">
+        <h1 className="font-heading text-3xl md:text-4xl font-black">
+          Real Estate Agents in {suburb.name}, {state.toUpperCase()} {suburb.postcode}
+        </h1>
+        {marketStats.priceChangeYoy !== null && (
+          <p className="text-sm text-gray-600 mt-2 flex items-center gap-1">
+            <TrendingUp className={`w-4 h-4 ${marketStats.priceChangeYoy >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            <span className={marketStats.priceChangeYoy >= 0 ? 'text-green-600' : 'text-red-600'}>
+              {marketStats.priceChangeYoy >= 0 ? '+' : ''}{marketStats.priceChangeYoy.toFixed(1)}%
+            </span>
+            <span>median price change (YoY)</span>
+          </p>
+        )}
+      </div>
 
       {/* Market stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <StatCard
           icon={Home}
           value={
@@ -187,7 +199,7 @@ export default async function SuburbPage({
               ? formatCurrency(marketStats.medianPriceHouse)
               : "N/A"
           }
-          label="Median House Price"
+          label="Median House"
         />
         <StatCard
           icon={Building2}
@@ -196,12 +208,39 @@ export default async function SuburbPage({
               ? formatCurrency(marketStats.medianPriceApartment)
               : "N/A"
           }
-          label="Median Unit Price"
+          label="Median Unit"
         />
         <StatCard
           icon={Users}
           value={formatNumber(agentCountFromStats || total)}
-          label="Total Agents"
+          label="Agents"
+        />
+        <StatCard
+          icon={Clock}
+          value={
+            marketStats.avgDaysOnMarket
+              ? `${Math.round(marketStats.avgDaysOnMarket)} days`
+              : "N/A"
+          }
+          label="Avg Days on Market"
+        />
+        <StatCard
+          icon={BarChart3}
+          value={
+            marketStats.salesVolume12m
+              ? formatNumber(marketStats.salesVolume12m)
+              : "N/A"
+          }
+          label="Sales (12mo)"
+        />
+        <StatCard
+          icon={TrendingUp}
+          value={
+            marketStats.clearanceRate
+              ? `${marketStats.clearanceRate.toFixed(1)}%`
+              : "N/A"
+          }
+          label="Clearance Rate"
         />
       </div>
 

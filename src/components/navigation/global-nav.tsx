@@ -51,7 +51,7 @@ export function GlobalNav() {
             <button
               onClick={handleVoiceClick}
               disabled={status !== 'idle'}
-              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 bg-voqo-green text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-voqo-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Ask Navigator"
             >
               <Mic className="w-4 h-4" />
@@ -104,7 +104,7 @@ export function GlobalNav() {
                 handleVoiceClick();
               }}
               disabled={status !== 'idle'}
-              className="w-full flex items-center justify-center gap-2 bg-primary text-white px-4 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 bg-voqo-green text-white px-4 py-3 rounded-md font-medium hover:bg-voqo-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Ask Navigator"
             >
               <Mic className="w-5 h-5" />

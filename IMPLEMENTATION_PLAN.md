@@ -10,7 +10,7 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 |-------|--------|-------|
 | Phase 1: Next.js Setup | **Complete** | Next.js 15, React 19, Tailwind 4, TypeScript 5 |
 | Phase 2: Database Schema | **Complete** | 7 tables, FTS5, 17,503 suburbs seeded |
-| Phase 3: Data Pipeline | **In Progress** | Pipeline structure created, SDK installed |
+| Phase 3: Data Pipeline | **In Progress** | Sample data seeded, AI pipeline needs refinement |
 | Phase 3.5: Query Helpers | **Complete** | 20+ query functions |
 | Phase 4: API Routes | **Complete** | 8 API endpoints implemented |
 | Phase 5: UI Components | **Complete** | 19 components, all typed |
@@ -118,7 +118,7 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 
 ### Phase 3: Data Pipeline — IN PROGRESS
 
-**Status:** Pipeline structure created, SDK installed.
+**Status:** Sample data seeded, AI pipeline needs refinement.
 
 **Implemented:**
 - `pipeline/schemas/index.ts` — Zod schemas: AgencyOutput, AgentOutput, SaleOutput, ReviewOutput
@@ -126,6 +126,14 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 - `pipeline/scripts/pipeline.ts` — CLI with --location, --agencies, --discover-agencies options
 - `@anthropic-ai/claude-agent-sdk` v0.2.22 installed
 - Zod 4.3.6 installed
+
+#### Sample Data Seeder
+- Created `scripts/seed-sample-data.ts` for MVP demos while AI pipeline is refined
+- Seeded 3 agencies: Ray White, McGrath, Belle Property Bondi Beach
+- 7 agents with realistic data: photos, bios, licenses, languages
+- 14 sales records
+- 12 reviews
+- Run with: `pnpm pipeline:seed-sample`
 
 ---
 
@@ -214,6 +222,9 @@ mcp__playwright__browser_snapshot → copy agent ID
 - Pipeline directory must be excluded from tsconfig.json to avoid Next.js build conflicts
 - Claude Agent SDK query() returns AsyncGenerator, iterate with `for await`
 - SDK options: allowedTools, maxTurns, maxBudgetUsd (no direct 'model' param at top level)
+- next.config.ts webpack watchOptions: exclude non-Next.js directories to prevent rebuild loops
+- AgentPhoto component: needs null checks for firstName/lastName to handle missing data
+- Sample data seeder approach: MVP demos while AI pipeline is refined
 
 ---
 
@@ -232,9 +243,9 @@ Last verified: 2026-01-28
 
 - [x] TypeScript: `pnpm typecheck` passes
 - [x] ESLint: `pnpm lint` passes
-- [x] Build: `pnpm build` passes (21 routes)
+- [x] Build: `pnpm build` passes (21 routes) — verified 2026-01-28
 - [ ] Tests: No test suite (Phase 9)
-- [ ] Pipeline: Not implemented (Phase 3)
+- [x] Sample data: Seeded via scripts/seed-sample-data.ts
 - [x] Voice code: Complete (Phase 8.0)
 - [x] Voice active: Layout integration complete (Phase 8.1)
 - [x] tsconfig.json: pipeline and agent-ralph-ui excluded from build
@@ -246,8 +257,8 @@ Last verified: 2026-01-28
 | Entity | Count | Status |
 |--------|-------|--------|
 | Suburbs | 17,503 | Seeded from CSV |
-| Agents | 0 | Awaiting pipeline |
-| Agencies | 0 | Awaiting pipeline |
-| Sales | 0 | Awaiting pipeline |
-| Reviews | 0 | Awaiting pipeline |
-| FTS Tables | 3 | Ready (empty) |
+| Agents | 7 | Sample data seeded |
+| Agencies | 3 | Sample data seeded |
+| Sales | 14 | Sample data seeded |
+| Reviews | 12 | Sample data seeded |
+| FTS Tables | 3 | Ready (populated) |

@@ -25,8 +25,10 @@ function AgentPhoto({
   className = "",
 }: AgentPhotoProps) {
   const { px, text } = sizeMap[size];
-  const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  const alt = `${firstName} ${lastName}`;
+  const first = firstName || '';
+  const last = lastName || '';
+  const initials = `${first.charAt(0) || '?'}${last.charAt(0) || '?'}`.toUpperCase();
+  const alt = `${first} ${last}`.trim() || 'Agent';
 
   if (photoUrl) {
     return (

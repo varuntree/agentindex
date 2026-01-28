@@ -6,7 +6,7 @@
 
 1. Study @IMPLEMENTATION_PLAN.md (if present; it may be incorrect) and use up to 500 Sonnet subagents to study existing source code in `src/*` and `pipeline/*` and compare it against `spec/*`. Use an Opus subagent to analyze findings, prioritize tasks, and create/update @IMPLEMENTATION_PLAN.md as a bullet point list sorted in priority of items yet to be implemented. Ultrathink. Consider searching for TODO, minimal implementations, placeholders, skipped/flaky tests, and inconsistent patterns. Study @IMPLEMENTATION_PLAN.md to determine starting point for research and keep it up to date with items considered complete/incomplete using subagents.
 
-2. For each task that produces visible UI output (pages, components, layout, styling), include a verification requirement: "Chrome verify: start dev server, navigate to [route], visually confirm [what to check]". This is backpressure — the build prompt will use Chrome MCP tools to verify rendered output.
+2. For each task that produces visible UI output (pages, components, layout, styling), include a verification requirement: "Playwright verify: start dev server, navigate to [route], visually confirm [what to check]". This is backpressure — the build prompt will use Playwright MCP tools to verify rendered output.
 
 IMPORTANT: Plan only. Do NOT implement anything. Do NOT assume functionality is missing; confirm with code search first. Treat `src/lib` as the project's standard library for shared utilities and components. Prefer consolidated, idiomatic implementations there over ad-hoc copies.
 

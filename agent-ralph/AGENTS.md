@@ -14,7 +14,7 @@ Run after implementing to get immediate feedback:
 - Typecheck: `pnpm tsc --noEmit`
 - Lint: `pnpm lint`
 - Build: `pnpm build`
-- Chrome verify (UI tasks only): start dev server, use Chrome MCP tools to check rendered page at relevant route
+- Playwright verify (UI tasks only): start dev server, use Playwright MCP tools (`mcp__playwright__browser_navigate`, `mcp__playwright__browser_snapshot`, `mcp__playwright__browser_take_screenshot`, `mcp__playwright__browser_resize`) to check rendered page at relevant route
 
 ## Tech Stack
 
@@ -30,7 +30,7 @@ Run after implementing to get immediate feedback:
 ## Auth & Credentials
 
 - Claude Agent SDK: uses Claude Code Max subscription, no ANTHROPIC_API_KEY needed
-- ElevenLabs: credentials loaded in Chrome, use signed URL auth flow
+- ElevenLabs: uses signed URL auth flow (server-side, no browser credentials needed)
 - No user auth in v1 — all pages public, no login
 
 ## Directory Structure

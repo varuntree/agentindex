@@ -33,8 +33,8 @@ cd agent-ralph
 ## AgentIndex Adaptations
 
 - **Specs** in `spec/*` (9 files), AI docs in `ai_docs/*`
-- **Chrome MCP verification** as backpressure for UI tasks (mobile 375px + desktop 1280px)
-- **No API keys** — Claude Code Max subscription for Agent SDK, ElevenLabs credentials in Chrome
+- **Playwright MCP verification** as backpressure for UI tasks (mobile 375px + desktop 1280px)
+- **No API keys** — Claude Code Max subscription for Agent SDK, ElevenLabs uses signed URL auth
 - **PRD implementation order** encoded as priority guide: scaffold → data model → pipeline → API → design system → pages → SEO → voice
 - **Source locations**: `src/*` (web app) + `pipeline/*` (data pipeline)
 
@@ -43,7 +43,7 @@ cd agent-ralph
 1. `loop.sh` feeds `PROMPT_plan.md` or `PROMPT_build.md` to `claude -p` (headless mode)
 2. Agent reads `spec/*` + `AGENTS.md` + `IMPLEMENTATION_PLAN.md` each iteration
 3. Picks most important task, implements with parallel subagents
-4. Validates via typecheck/lint/build + Chrome verification for UI tasks
+4. Validates via typecheck/lint/build + Playwright verification for UI tasks
 5. Updates `IMPLEMENTATION_PLAN.md`, commits, pushes
 6. Loop restarts with fresh context — agent reads updated plan from disk
 
@@ -51,7 +51,7 @@ cd agent-ralph
 
 - **One task per loop** — 100% smart zone context utilization
 - **Don't assume not implemented** — always search codebase first
-- **Backpressure** — build/lint/typecheck + Chrome visual verification
+- **Backpressure** — build/lint/typecheck + Playwright visual verification
 - **Plan is disposable** — regenerate with `./loop.sh plan` if trajectory diverges
 - **AGENTS.md stays lean** — operational info only, no progress notes
 - **Implement completely** — no stubs or placeholders

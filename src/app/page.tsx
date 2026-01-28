@@ -13,7 +13,7 @@ import { SearchBar } from "@/components/search/search-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
-import { HeroVoiceButton } from "@/components/voice";
+import { HeroVoiceButtonWrapper } from "@/components/voice/HeroVoiceButtonWrapper";
 import { getSiteStats, getTopSuburbs, getTopAgencies } from "@/lib/db/queries";
 import { formatNumber, formatCompactPrice } from "@/lib/utils/format";
 import { homeJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
@@ -110,7 +110,7 @@ export default async function HomePage() {
           </div>
 
           {/* Voice Navigator Button */}
-          <HeroVoiceButton />
+          <HeroVoiceButtonWrapper />
         </div>
       </section>
 

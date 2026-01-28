@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X, Mic } from 'lucide-react';
 import { SearchBar } from '@/components/search/search-bar';
-import { useVoice } from '@/components/voice';
+import { useVoice } from '@/components/voice/VoiceProvider';
 
 const navLinks = [
   { label: 'Agents', href: '/agents' },
@@ -13,7 +13,11 @@ const navLinks = [
 
 export function GlobalNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { startSession, status } = useVoice();
+  
+  // useVoice is safe because GlobalNav is always rendered inside VoiceLayoutWrapper
+  // which provides VoiceProvider (with ssr: false, so this only runs client-side)
+  const voiceContext = useVoice();
+  const { startSession, status } = voiceContext;
 
   const handleVoiceClick = () => {
     if (status === 'idle') {

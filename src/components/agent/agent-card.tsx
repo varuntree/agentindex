@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Home, TrendingUp, MapPin } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
@@ -21,6 +22,7 @@ interface Agent {
   agencySlug?: string;
   photoUrl?: string | null;
   rating?: number;
+  ratingsCount?: number;
   totalSalesCount?: number;
   totalSalesVolume?: number;
   suburbs?: AgentSuburb[];
@@ -41,6 +43,7 @@ function AgentCard({ agent, className = "" }: AgentCardProps) {
     agencySlug,
     photoUrl,
     rating,
+    ratingsCount,
     totalSalesCount,
     totalSalesVolume,
     suburbs = [],
@@ -48,6 +51,10 @@ function AgentCard({ agent, className = "" }: AgentCardProps) {
 
   const visibleSuburbs = suburbs.slice(0, 3);
   const extraCount = suburbs.length - 3;
+
+  // Get primary suburb state for location display
+  const primarySuburb = suburbs[0];
+  const locationState = primarySuburb?.state?.toUpperCase();
 
   return (
     <Card className={className}>
@@ -83,27 +90,44 @@ function AgentCard({ agent, className = "" }: AgentCardProps) {
               </p>
             )}
             {rating !== undefined && rating > 0 && (
-              <StarRating rating={rating} size="sm" showValue className="mt-1" />
+              <div className="flex items-center gap-1.5 mt-1">
+                <StarRating rating={rating} size="sm" showValue />
+                {ratingsCount !== undefined && ratingsCount > 0 && (
+                  <span className="text-xs text-gray-500">({ratingsCount})</span>
+                )}
+              </div>
             )}
           </div>
         </div>
 
-        {(totalSalesCount !== undefined || totalSalesVolume !== undefined) && (
-          <div className="flex gap-6 mt-4 text-sm">
+        {(totalSalesCount !== undefined || totalSalesVolume !== undefined || locationState) && (
+          <div className="grid grid-cols-3 gap-3 mt-4 text-sm">
             {totalSalesCount !== undefined && (
-              <div>
-                <span className="font-bold text-black">
-                  {formatNumber(totalSalesCount)}
-                </span>{" "}
-                <span className="text-gray-500">sales</span>
+              <div className="flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-gray-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-black">
+                    {formatNumber(totalSalesCount)}
+                  </span>{" "}
+                  <span className="text-gray-500">sales</span>
+                </div>
               </div>
             )}
             {totalSalesVolume !== undefined && totalSalesVolume > 0 && (
-              <div>
-                <span className="font-bold text-black">
-                  {formatCompactPrice(totalSalesVolume)}
-                </span>{" "}
-                <span className="text-gray-500">volume</span>
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-gray-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-black">
+                    {formatCompactPrice(totalSalesVolume)}
+                  </span>{" "}
+                  <span className="text-gray-500">vol</span>
+                </div>
+              </div>
+            )}
+            {locationState && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-gray-600">{locationState}</span>
               </div>
             )}
           </div>

@@ -1,0 +1,1 @@
+1. we should make sure the voice interations should not effect the seo of the page.

@@ -1,9 +1,14 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { VoiceProvider } from './VoiceProvider';
+import dynamic from 'next/dynamic';
 import type { PageType } from '@/lib/voice/types';
 import type { ReactNode } from 'react';
+
+const VoiceProvider = dynamic(
+  () => import('./VoiceProvider').then((mod) => mod.VoiceProvider),
+  { ssr: false }
+);
 
 interface VoiceLayoutWrapperProps {
   children: ReactNode;

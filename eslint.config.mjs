@@ -17,6 +17,7 @@ const eslintConfig = [
       "ralph/**",
       "node_modules/**",
       ".next/**",
+      ".next-server-debug/**",
       "drizzle/**",
       "pipeline/**",
     ],

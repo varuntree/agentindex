@@ -124,3 +124,36 @@ ai_docs/                    # AI integration docs
 - Must be valid YAML with proper structure
 - `onlyBuiltDependencies` belongs in `package.json` under `pnpm` key, NOT in workspace file
 - Workspace file is for defining package patterns only
+
+### @next/swc Version Mismatch
+- Symptoms: `TypeError: a[d] is not a function` during prerender, cryptic webpack-runtime.js errors
+- Cause: pnpm-lock.yaml pins @next/swc to wrong version after partial updates
+- Fix: Full clean reinstall: `rm -rf node_modules .next pnpm-lock.yaml && pnpm install`
+- Warning appears in build output: `Mismatching @next/swc version`
+
+### Client Component Wrappers (CRITICAL)
+- **NEVER import voice/nav components directly in server components**
+- Voice barrel export (`@/components/voice`) includes client-only code
+- Direct imports bypass SSR protection and break production builds
+
+**Wrong (causes build failures):**
+```tsx
+// layout.tsx - WRONG
+import { VoiceLayoutWrapper } from "@/components/voice";
+import { GlobalNav } from "@/components/navigation/global-nav";
+```
+
+**Correct:**
+```tsx
+// layout.tsx - CORRECT
+import { VoiceLayoutWrapperClient } from "@/components/voice/VoiceLayoutWrapperClient";
+import { GlobalNavWrapper } from "@/components/navigation/GlobalNavWrapper";
+```
+
+**Wrapper component pattern:**
+- `VoiceLayoutWrapper` → use `VoiceLayoutWrapperClient`
+- `GlobalNav` → use `GlobalNavWrapper`
+- `HeroVoiceButton` → use `HeroVoiceButtonWrapper`
+- `VoiceContextSetter` → use `VoiceContextSetterWrapper`
+
+Wrappers use `dynamic(() => import(...), { ssr: false })` to prevent SSR execution.

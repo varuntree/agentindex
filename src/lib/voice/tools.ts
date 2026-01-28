@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Client tools for ElevenLabs voice agent
  *

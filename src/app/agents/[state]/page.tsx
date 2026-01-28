@@ -8,6 +8,9 @@ import { SearchBar } from "@/components/search/search-bar";
 import { Pagination } from "@/components/ui/pagination";
 import { getStateStats, getSuburbsList } from "@/lib/db/queries";
 import { formatNumber, formatCurrency } from "@/lib/utils/format";
+import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
+
+const BASE_URL = "https://agentindex.com.au";
 
 export const revalidate = 43200;
 
@@ -67,8 +70,18 @@ export default async function StatePage({
 
   const totalPages = Math.ceil(total / limit);
 
+  const breadcrumbData = breadcrumbJsonLd([
+    { name: "Home", url: BASE_URL },
+    { name: "Agents", url: `${BASE_URL}/agents` },
+    { name: fullName, url: `${BASE_URL}/agents/${state}` },
+  ]);
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
       <Breadcrumb
         items={[
           { label: "Agents", href: "/agents" },

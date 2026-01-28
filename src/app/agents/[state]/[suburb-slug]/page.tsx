@@ -15,6 +15,9 @@ import {
   getNearbySuburbs,
 } from "@/lib/db/queries";
 import { formatNumber, formatCurrency } from "@/lib/utils/format";
+import { breadcrumbJsonLd, suburbJsonLd } from "@/lib/seo/jsonld";
+
+const BASE_URL = "https://agentindex.com.au";
 
 export const revalidate = 21600;
 
@@ -123,8 +126,28 @@ export default async function SuburbPage({
       ? `${baseParts[0]}?${qsParts.join("&")}`
       : baseParts[0];
 
+  const breadcrumbData = breadcrumbJsonLd([
+    { name: "Home", url: BASE_URL },
+    { name: "Agents", url: `${BASE_URL}/agents` },
+    { name: fullStateName, url: `${BASE_URL}/agents/${state}` },
+    { name: suburb.name, url: `${BASE_URL}/agents/${state}/${suburbSlug}` },
+  ]);
+
+  const suburbData = suburbJsonLd(
+    { name: suburb.name, state: state.toUpperCase() },
+    agents.map((a) => a.fullName)
+  );
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(suburbData) }}
+      />
       <Breadcrumb
         items={[
           { label: "Agents", href: "/agents" },

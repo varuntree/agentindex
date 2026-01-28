@@ -20,6 +20,9 @@ import {
   formatNumber,
   formatDate,
 } from "@/lib/utils/format";
+import { breadcrumbJsonLd, agencyJsonLd } from "@/lib/seo/jsonld";
+
+const BASE_URL = "https://agentindex.com.au";
 
 export const revalidate = 86400;
 
@@ -80,8 +83,34 @@ export default async function AgencyProfilePage({ params }: PageProps) {
   ].filter(Boolean);
   const fullAddress = addressParts.join(", ");
 
+  const breadcrumbData = breadcrumbJsonLd([
+    { name: "Home", url: BASE_URL },
+    { name: "Agencies", url: `${BASE_URL}/agencies` },
+    { name: agency.name, url: `${BASE_URL}/agency/${slug}` },
+  ]);
+
+  const agencyData = agencyJsonLd({
+    name: agency.name,
+    phone: agency.phone,
+    email: agency.email,
+    websiteUrl: agency.websiteUrl,
+    streetAddress: agency.streetAddress,
+    suburb: agency.suburb,
+    state: agency.state,
+    postcode: agency.postcode,
+    totalAgents: agency.totalAgents ?? 0,
+  });
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(agencyData) }}
+      />
       <Breadcrumb
         items={[
           { label: "Agencies", href: "/agencies" },

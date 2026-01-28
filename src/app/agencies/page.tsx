@@ -6,6 +6,9 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Pagination } from "@/components/ui/pagination";
 import { getAgenciesList } from "@/lib/db/queries";
 import { formatNumber, formatCompactPrice } from "@/lib/utils/format";
+import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
+
+const BASE_URL = "https://agentindex.com.au";
 
 export const revalidate = 21600;
 
@@ -52,8 +55,17 @@ export default async function AgenciesPage({ searchParams }: PageProps) {
   // Build basePath preserving state filter
   const basePath = stateFilter ? `/agencies?state=${stateFilter}` : "/agencies";
 
+  const breadcrumbData = breadcrumbJsonLd([
+    { name: "Home", url: BASE_URL },
+    { name: "Agencies", url: `${BASE_URL}/agencies` },
+  ]);
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
       <Breadcrumb items={[{ label: "Agencies" }]} className="mb-6" />
 
       <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 mb-6">

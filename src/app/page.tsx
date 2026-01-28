@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { getSiteStats, getTopSuburbs } from "@/lib/db/queries";
 import { formatNumber } from "@/lib/utils/format";
+import { homeJsonLd } from "@/lib/seo/jsonld";
 
 export const revalidate = 3600;
 
@@ -57,8 +58,14 @@ export default async function HomePage() {
     stats.totalAgencies > 0 ||
     stats.totalSales > 0;
 
+  const homeData = homeJsonLd();
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeData) }}
+      />
       {/* ----------------------------------------------------------------- */}
       {/* Hero                                                              */}
       {/* ----------------------------------------------------------------- */}

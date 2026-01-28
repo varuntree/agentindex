@@ -1,6 +1,6 @@
 # AgentIndex Implementation Plan
 
-Last updated: 2026-01-28 — tag 0.0.1
+Last updated: 2026-01-28 — tag 0.0.2
 
 ---
 
@@ -11,8 +11,8 @@ Last updated: 2026-01-28 — tag 0.0.1
 - [x] **Phase 3.5** (3.5.1-3.5.6) — Query helpers: agent/agency/suburb/search/stats
 - [x] **Phase 4** (4.1-4.9) — 8 API routes + response/cache utils
 - [x] **Phase 5** (5.1-5.22) — All UI components: Button, Card, Badge, Input, StarRating, Pagination, Skeleton, StatCard, AgentCard, AgentPhoto, SuburbBadge, PriceDisplay, PropertyTypeIcon, Table, Breadcrumb, SearchBar, GlobalNav, GlobalFooter, FilterBar
-- [x] **Phase 6** (6.1-6.9) — All pages: Homepage, Agent Profile, Suburb Listing, Agency Profile, All Agencies, State Listing, All Agents, 404, Error
-- [x] **Phase 7 partial** (7.1-7.5, 7.7-7.8) — Metadata helpers, JSON-LD (agent/agency/suburb/home/breadcrumb), sitemap.xml, robots.txt
+- [x] **Phase 6** (6.1-6.10) — All pages + loading.tsx skeletons
+- [x] **Phase 7** (7.1-7.8) — Metadata, JSON-LD (agent/agency/suburb/home/breadcrumb), sitemap, robots, breadcrumb structured data on all pages
 
 Build status: typecheck + lint + build all pass (21 routes)
 
@@ -29,11 +29,7 @@ Build status: typecheck + lint + build all pass (21 routes)
 
 ## Remaining Work
 
-### Phase 6 remaining: Loading Skeletons
-- [ ] **6.10** — Global + per-route loading.tsx files using Skeleton components
-
 ### Phase 7 remaining: SEO
-- [ ] **7.6** — Wire Breadcrumb component + BreadcrumbList JSON-LD on all pages
 - [ ] **7.9** — Canonical tags: self-referencing every page; paginated/sorted → canonical = page 1 default sort
 - [ ] **7.10** — OG image generation via @vercel/og (agent/suburb/agency variants, 1200x630)
 - [ ] **7.11** — Internal linking audit: verify link density

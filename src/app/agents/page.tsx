@@ -5,6 +5,9 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { getStateStats } from "@/lib/db/queries";
 import { formatNumber } from "@/lib/utils/format";
+import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
+
+const BASE_URL = "https://agentindex.com.au";
 
 export const metadata: Metadata = {
   title: "Real Estate Agents by State",
@@ -29,8 +32,17 @@ export default async function AgentsPage() {
     })
   );
 
+  const breadcrumbData = breadcrumbJsonLd([
+    { name: "Home", url: BASE_URL },
+    { name: "Agents", url: `${BASE_URL}/agents` },
+  ]);
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
       <Breadcrumb items={[{ label: "Agents" }]} className="mb-6" />
 
       <h1 className="font-heading text-3xl md:text-4xl font-black mb-8">

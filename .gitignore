@@ -1,0 +1,37 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# db
+data/agentindex.db
+data/agentindex.db-journal
+data/agentindex.db-wal
+
+# pipeline output images
+public/images/agents/
+public/images/agencies/
+public/images/properties/
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# build
+*.tsbuildinfo
+next-env.d.ts
+
+# debug
+npm-debug.log*
+pnpm-debug.log*

@@ -72,6 +72,16 @@ public/images/              # Agent/agency images
 - All pages mobile-first responsive
 - API routes: public, no auth, read-only from SQLite
 
+## Gotchas
+
+- `better-sqlite3` needs `serverExternalPackages: ["better-sqlite3"]` in `next.config.ts`
+- pnpm 10: add `pnpm.onlyBuiltDependencies` to `package.json` for native modules (`better-sqlite3`, `esbuild`, `sharp`)
+- Tailwind 4: CSS-based config via `@theme` in `globals.css`, no `tailwind.config.js`. PostCSS via `@tailwindcss/postcss`
+- ESLint: `eslint .` not `next lint` (deprecated Next.js 15.5+). Needs `@eslint/eslintrc` for FlatCompat. Ignore `agent-ralph-ui/`, `agent-ralph/`, `ralph/` dirs
+- FTS5 migrations are manual SQL (not in Drizzle journal) — apply via `db.exec(sql)`
+- Drizzle 0.38 + better-sqlite3: relational queries need `.sync()` to unwrap synchronous results
+- Suburb CSV seed: ~17,500 rows from matthewproctor.com. Script auto-downloads if missing.
+
 ## Operational Notes
 
 - Specs live in `spec/*` (9 files covering architecture, tech stack, data model, pipeline, API, pages, design system, voice, SEO)

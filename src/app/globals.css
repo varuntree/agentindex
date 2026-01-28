@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-voqo-green: #26C169;
+  --color-voqo-dark-green: #126D39;
+  --color-voqo-lime: #ECF87F;
+
+  /* Font families */
+  --font-heading: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-accent: var(--font-fraunces), ui-serif, Georgia, serif;
+}
+
+/* Base styles */
+body {
+  font-family: var(--font-body);
+  color: #111;
+  background: #fff;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+/* Brutalist border default */
+.border-brutal {
+  border: 2px solid #000;
+}
+
+.shadow-brutal {
+  box-shadow: 4px 4px 0 #000;
+}
+
+.shadow-brutal-sm {
+  box-shadow: 2px 2px 0 #000;
+}
+
+/* Dot pattern background utility */
+.bg-dots {
+  background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Voice waveform animation */
+@keyframes voice-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-voice-pulse {
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+/* Stagger bars for waveform */
+.voice-bar:nth-child(1) {
+  animation-delay: 0s;
+}
+.voice-bar:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.voice-bar:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.voice-bar:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.voice-bar:nth-child(5) {
+  animation-delay: 0.6s;
+}

@@ -98,7 +98,7 @@ export default async function SuburbPage({
   const sort = (sortParam as "rating" | "sales" | "name" | "quality") ?? "sales";
   const limit = 20;
 
-  const [marketStats, { agents, total }] = await Promise.all([
+  const [suburbStats, { agents, total }] = await Promise.all([
     getSuburbMarketStats(suburbSlug),
     getAgentsList({
       suburb: suburbSlug,
@@ -110,6 +110,8 @@ export default async function SuburbPage({
         : propertyType,
     }),
   ]);
+
+  const { marketStats, totalAgents: agentCountFromStats } = suburbStats;
 
   const totalPages = Math.ceil(total / limit);
 
@@ -181,8 +183,8 @@ export default async function SuburbPage({
         <StatCard
           icon={Home}
           value={
-            marketStats.medianHousePrice
-              ? formatCurrency(marketStats.medianHousePrice)
+            marketStats.medianPriceHouse
+              ? formatCurrency(marketStats.medianPriceHouse)
               : "N/A"
           }
           label="Median House Price"
@@ -190,15 +192,15 @@ export default async function SuburbPage({
         <StatCard
           icon={Building2}
           value={
-            marketStats.medianUnitPrice
-              ? formatCurrency(marketStats.medianUnitPrice)
+            marketStats.medianPriceApartment
+              ? formatCurrency(marketStats.medianPriceApartment)
               : "N/A"
           }
           label="Median Unit Price"
         />
         <StatCard
           icon={Users}
-          value={formatNumber(marketStats.totalAgents)}
+          value={formatNumber(agentCountFromStats || total)}
           label="Total Agents"
         />
       </div>

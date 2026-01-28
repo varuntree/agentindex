@@ -1,6 +1,6 @@
 # AgentIndex Implementation Plan
 
-Last updated: 2026-01-29 — Voice API fixes (4.1, 4.4, CQ.1) complete
+Last updated: 2026-01-29 — Comprehensive audit complete via 25 parallel agents
 
 ---
 
@@ -10,146 +10,191 @@ Last updated: 2026-01-29 — Voice API fixes (4.1, 4.4, CQ.1) complete
 |-------|--------|-------|
 | Phase 1: Next.js Setup | **Complete** | Next.js 15, React 19, Tailwind 4, TypeScript 5 |
 | Phase 2: Database Schema | **Complete** | 7 tables, FTS5, 17,503 suburbs seeded |
-| Phase 3: Data Pipeline | **Working** | v2 pipeline complete, missing CLI utils + image system |
-| Phase 3.5: Query Helpers | **~90%** | Core queries done, missing market stats fields |
-| Phase 4: API Routes | **~90%** | Voice endpoint fixed, suburb endpoint needs work |
-| Phase 5: UI Components | **~80%** | 19 components, gaps in spec alignment + missing primitives |
-| Phase 6: Pages | **~75%** | All pages exist, missing sections per spec |
-| Phase 7: SEO | **~85%** | Core SEO done, sitemap/JSON-LD gaps |
-| Phase 8: Voice Integration | **Complete** | ElevenLabs agent configured, 6 client tools registered |
-| Phase 9: Testing & QA | **NOT STARTED** | No test framework installed |
+| Phase 3: Data Pipeline | **~70%** | Core pipeline works, missing image/config/utils |
+| Phase 3.5: Query Helpers | **~75%** | Core queries done, missing computed stats + enrichment |
+| Phase 4: API Routes | **~95%** | Endpoints work, response shape deviations |
+| Phase 5: UI Components | **~75%** | 19 components, missing primitives + spec alignment |
+| Phase 6: Pages | **~65%** | All pages exist, significant section gaps |
+| Phase 7: SEO | **~70%** | Core SEO done, sitemap/JSON-LD gaps |
+| Phase 8: Voice Integration | **~95%** | Working, minor polish needed |
+| Phase 9: Testing & QA | **NOT STARTED** | No test framework |
 
 ---
 
 ## CRITICAL BLOCKERS
 
-### Phase 8.3 ElevenLabs Setup (COMPLETE)
-**Status:** ElevenLabs Conversational AI agent configured and verified.
-
-- [x] **8.3.1** — Navigate to ElevenLabs dashboard (elevenlabs.io)
-- [x] **8.3.2** — Create Conversational AI agent "AgentIndex Voice Agent" (ID: agent_1201kg32hgw3ebvskwnngc4qcy8w)
-- [x] **8.3.3** — Configure: LLM=gpt-4o, auth enabled, overrides enabled (System prompt, First message)
-- [x] **8.3.4** — Register 6 client tools (navigateToPage, searchAgents, filterResults, scrollToSection, activateAssistant, highlightAgent)
-- [x] **8.3.5** — Copy Agent ID + API key to `.env.local`
-- [x] **8.3.6** — Verify: POST /api/voice/signed-url returns signedUrl with overrides
+None. All blocking items resolved.
 
 ---
 
-## HIGH PRIORITY GAPS
+## HIGH PRIORITY — API & Data (Phase 3.5 + 4)
 
-### API Response Deviations (Phase 4 fixes)
+### API Response Shape (affects all consumers)
 
-- [x] **4.1** — `/api/voice/signed-url`: Add missing `sessionId`, `expiresAt` fields
-- [x] **4.2** — `/api/voice/signed-url`: Already POST per spec
-- [ ] **4.3** — `/api/suburb/[slug]`: Add `demographics` object, `agents` list, `pagination`
-- [x] **4.4** — Update `src/lib/voice/elevenlabs.ts`: Use POST not GET (also fixed URL path: `get-signed-url` not `get_signed_url`)
+- [ ] **4.5** — All endpoints: Decide on response wrapper (`{success,data}` vs flat per spec)
+- [ ] **4.6** — `/api/agents`: Fix sort param values (spec: `sales_count`/`avg_price`/`name`; impl: `rating`/`sales`/`name`/`quality`)
+- [ ] **4.7** — `/api/agents`: Add `suburb` context object when filtering by suburb
+- [x] **4.3** — `/api/suburb/[slug]`: Add `demographics`, `agents` list, `pagination` params
 
-**Playwright verify:** Inspect network tab for response shape after changes.
+**Playwright verify:** `fetch('/api/agents?suburb=bondi-beach-nsw')` → check response includes suburb stats.
 
-### Page Implementation Gaps (Phase 6 fixes)
+### Query Enrichment (Phase 3.5)
 
-#### Homepage (`/`)
-- [ ] **6.1.1** — Add "Popular Agencies" carousel (spec section 1.5)
-- [ ] **6.1.2** — Suburb cards: add median price + postcode display
+- [x] **3.5.1** — `getSuburbMarketStats`: Add YoY price change, clearance rate, rental yield, avg days on market
+- [x] **3.5.2** — `getSuburbMarketStats`: Add demographics (population, median_age, median_income)
+- [ ] **3.5.3** — Agent profile: Add computed stats object (median_sale_price, avg_days_on_market, sales_last_6_months)
+- [ ] **3.5.4** — `getAgencyBySlug`: Return logoUrl, avgSalePrice, topSuburbs array
+- [ ] **3.5.5** — Agency: Add recent_sales query with agent attribution (not agent aggregates)
+- [ ] **3.5.6** — Agent list: Add per-suburb sales stats (sales_count_suburb, avg_sale_price_suburb)
+- [ ] **3.5.7** — Search results: Add photo_url, suburbs[], total_sales_count, avg_sale_price to agent results
 
-**Playwright verify:** Screenshot homepage, verify carousel + suburb card fields.
+---
 
-#### Agent Profile (`/agent/[slug]`)
-- [ ] **6.2.1** — Add social links section (LinkedIn, email, phone)
-- [ ] **6.2.2** — Add property type breakdown chart
-- [ ] **6.2.3** — Add sales sort/filter controls
-- [ ] **6.2.4** — Add review sub-ratings (communication, knowledge, negotiation)
+## HIGH PRIORITY — Pages (Phase 6)
 
-**Playwright verify:** Screenshot agent page, verify all sections present.
+### Homepage (`/`)
 
-#### Suburb Listing (`/agents/[state]/[suburb-slug]`)
-- [ ] **6.3.1** — Add market overview text paragraph
-- [ ] **6.3.2** — Add price-by-property-type table
-- [ ] **6.3.3** — Add notable sales section
-- [ ] **6.3.4** — Add postcode display in header
-- [ ] **6.3.5** — Add Voice button integration
+- [ ] **6.1.1** — Add "Popular Agencies" carousel section (spec 1.5: 8 agency logos)
+- [ ] **6.1.2** — Suburb cards: Add median price + postcode display
+- [ ] **6.1.3** — Hero: Add Voice Navigator button ("Ask me to find an agent")
+- [ ] **6.1.4** — Stats: Add green vertical separators between stats
 
-**Playwright verify:** Screenshot suburb page, verify market data sections.
+**Playwright verify:** Navigate to `/`, screenshot, verify carousel + suburb card fields + voice button.
 
-#### Agency Profile (`/agency/[slug]`)
-- [ ] **6.4.1** — Display agency logo (currently missing)
-- [ ] **6.4.2** — Add Agency Stats section (avgSalePrice, topSuburbs, etc.)
-- [ ] **6.4.3** — Replace agent summary with actual Recent Sales list
+### Agent Profile (`/agent/[slug]`)
 
-**Playwright verify:** Screenshot agency page, verify logo + stats + sales.
+- [ ] **6.2.1** — Header: Add agency logo (40px height)
+- [ ] **6.2.2** — Header: Add social links (LinkedIn, Facebook, Instagram, website)
+- [ ] **6.2.3** — Stats: Add property type breakdown donut chart
+- [ ] **6.2.4** — Sales: Add sort dropdown + property type/date filters
+- [ ] **6.2.5** — Sales: Add card layout for mobile (currently table everywhere)
+- [ ] **6.2.6** — Sales: Add property images, beds/baths/parking icons, sale method badge
+- [ ] **6.2.7** — Reviews: Add sub-ratings bar chart (Communication, Knowledge, Negotiation)
+- [ ] **6.2.8** — Reviews: Add "Would Hire Again" %, buyer/seller badge, verified badge
+- [ ] **6.2.9** — Reviews: Add pagination (currently shows all)
+- [ ] **6.2.10** — Voice button: Change label to "Talk to [FirstName]'s Assistant"
 
-#### State/Agencies Pages (minor)
-- [ ] **6.5.1** — State page: Add sort controls
-- [ ] **6.5.2** — Agencies page: Add stats display per agency
+**Playwright verify:** Navigate to `/agent/[slug]`, screenshot, verify logo + social links + charts + sales filters.
 
-### Component Gaps (Phase 5 fixes)
+### Suburb Listing (`/agents/[state]/[suburb-slug]`)
 
-- [ ] **5.1** — GlobalNav: Add Voice Navigator button
+- [ ] **6.3.1** — Header: Add postcode in heading
+- [ ] **6.3.2** — Header: Add YoY price change indicators (+X% arrow)
+- [ ] **6.3.3** — Header: Add Avg Days on Market, Total Sales 12mo, Price Range stats
+- [ ] **6.3.4** — Header: Add Voice button ("Help me find an agent in [Suburb]")
+- [ ] **6.3.5** — Add Suburb Stats section: market overview text paragraph
+- [ ] **6.3.6** — Add Suburb Stats section: median price by property type table
+- [ ] **6.3.7** — Add Suburb Stats section: 3 notable recent sales
+
+**Playwright verify:** Navigate to `/agents/nsw/bondi-beach-nsw`, screenshot, verify postcode + YoY + stats section.
+
+### Agency Profile (`/agency/[slug]`)
+
+- [ ] **6.4.1** — Header: Display agency logo (currently missing)
+- [ ] **6.4.2** — Header: Add Voice Receptionist button ("Talk to [Agency] Reception")
+- [ ] **6.4.3** — Agent Roster: Add sort controls (Sales Count, Rating, Name)
+- [ ] **6.4.4** — Add Agency Stats section: performance grid + property type bar chart
+- [ ] **6.4.5** — Add Agency Stats section: Top 10 suburbs covered table
+- [ ] **6.4.6** — Recent Sales: Show individual property sales (not agent aggregates)
+
+**Playwright verify:** Navigate to `/agency/[slug]`, screenshot, verify logo + voice button + stats section.
+
+### State/Agencies Pages
+
+- [ ] **6.5.1** — State page: Add sort controls for suburbs
+- [ ] **6.5.2** — Agencies page: Add stats display per agency card
+
+---
+
+## HIGH PRIORITY — Components (Phase 5)
+
+### Navigation
+
+- [ ] **5.1** — GlobalNav: Add Voice Navigator button ("Ask Navigator")
+- [ ] **5.10** — GlobalFooter: Add About section with tagline + description
+- [ ] **5.11** — GlobalFooter: Add Contact link to legal section
+- [ ] **5.4** — GlobalFooter: Make suburb links dynamic from DB (currently hardcoded)
+
+**Playwright verify:** Screenshot nav, verify voice button visible. Screenshot footer, verify About section.
+
+### Missing Components
+
+- [ ] **5.5** — Add mobile search overlay component
+- [ ] **5.6** — Add form primitives: Textarea, Select, Checkbox, Radio
 - [ ] **5.2** — FilterBar: Add "Clear All" button
 - [ ] **5.3** — FilterBar: Add property type chips on suburb page
-- [ ] **5.4** — GlobalFooter: Make suburb links dynamic from DB (currently hardcoded)
-- [ ] **5.5** — Add mobile search overlay component
-- [ ] **5.6** — Add missing form primitives: Textarea, Select, Checkbox, Radio
 
-**Playwright verify:** Screenshot nav, filter bar, footer; verify buttons/links.
+### Spec Alignment
 
-### SEO Gaps (Phase 7 fixes)
+- [ ] **5.12** — Button: Change border from 2px to 3px per spec
+- [ ] **5.9** — Pagination: Fix border consistency (inactive uses 1px, should be 2px)
+- [ ] **5.7** — StatCard: Change font from text-3xl to text-4xl
+- [ ] **CQ.2** — AgentCard: Change layout from flex to grid per spec
+- [ ] **CQ.3** — AgentCard: Add agency logo, action buttons, all icons per spec
 
-- [ ] **7.1** — Split sitemap into multiple files: agents, suburbs, agencies, pages
-- [ ] **7.2** — Change agent/agency changefreq from weekly to monthly
-- [ ] **7.3** — JSON-LD Agent: Add reviews array
-- [ ] **7.4** — JSON-LD Agency: Add employees array, employee ratings
+**Playwright verify:** Screenshot button, pagination, stat card; compare border/font to spec.
 
-### Data/Query Gaps (Phase 3.5 fixes)
+---
 
-- [ ] **3.5.1** — `getSuburbMarketStats`: Add YoY price change, clearance rate, rental yield
-- [ ] **3.5.2** — `getSuburbMarketStats`: Add demographics object
-- [ ] **3.5.3** — Agent list query: Add detailed aggregations per spec
-- [ ] **3.5.4** — `getAgencyBySlug`: Return logoUrl, avgSalePrice, topSuburbs
+## HIGH PRIORITY — SEO (Phase 7)
 
-### Pipeline Gaps (Phase 3 fixes)
+### Sitemap
+
+- [ ] **7.1** — Split sitemap into index + 4 files: agents, suburbs, agencies, pages
+- [ ] **7.2** — Fix changefreq: suburbs weekly, agents/agencies monthly, static yearly
+
+### JSON-LD Schemas
+
+- [ ] **7.3** — Agent: Add `url`, `jobTitle`, `worksFor.url`, `review` array
+- [ ] **7.4** — Agent: Change `areaServed` from `Place` to `City` type
+- [ ] **7.5** — Agent: Fix `reviewCount` vs `ratingCount` inconsistency
+- [ ] **7.6** — Agency: Add `aggregateRating`, `employee` array, `areaServed`
+- [ ] **7.7** — Suburb ItemList: Add agent `aggregateRating` to each ListItem
+
+### Metadata
+
+- [ ] **7.8** — Suburb title: Add "Best", year (2026), postcode per spec
+- [ ] **7.9** — Homepage SearchAction: Fix URL (`/search?q=` not `/agents?q=`)
+
+---
+
+## MEDIUM PRIORITY — Pipeline (Phase 3)
 
 - [ ] **3.1** — Add image download system (agent photos, agency logos)
-- [ ] **3.2** — Add license verification integration in pipeline flow
+- [ ] **3.4** — Add config file support (pipeline-config.json)
 - [ ] **3.3** — Add CLI utility commands: `validate`, `report`, `retry`, `dedupe`
-- [ ] **3.4** — Add config file support (pipeline.config.json)
-
-### Code Quality
-
-- [x] **CQ.1** — Remove 7 console.log debug statements from VoiceProvider.tsx
-- [ ] **CQ.2** — AgentCard: Change layout from flex to grid per spec
-- [ ] **CQ.3** — AgentCard: Add missing icons per spec
+- [ ] **3.2** — Add license verification integration
+- [ ] **3.5** — Add per-domain rate limiting (spec: 30 req/domain/min)
+- [ ] **3.6** — Wrap storage operations in transaction
+- [ ] **3.7** — Implement merge strategy for data conflicts (preserve best quality)
 
 ---
 
-## MEDIUM PRIORITY
+## MEDIUM PRIORITY — Voice Polish (Phase 8)
 
-### UI Polish (Phase 5)
-
-- [ ] **5.7** — StatCard: Change font from text-3xl to text-4xl per spec
-- [ ] **5.8** — Button: Change border-radius from rounded-lg to rounded-md
-- [ ] **5.9** — Pagination: Fix inactive border style per spec
-
-**Playwright verify:** Screenshot components, compare to spec.
-
-### DB Schema Alignment (Phase 2)
-
-- [ ] **2.1** — Consider renaming lat/lng to latitude/longitude for clarity
-- [ ] **2.2** — Consider timestamp storage mode (integer vs text)
+- [ ] **8.5** — CSS: Rename `voice-bar` to `animate-wave`, use height animation per spec
+- [ ] **8.6** — Remove unused VoiceButton.tsx (VoicePanel handles button)
+- [ ] **8.7** — Add usage tracking: `logVoiceSession()` to database
+- [ ] **8.8** — VoicePanel: Use green (bg-green-500) for listening state, not bg-primary
 
 ---
 
-## LOW PRIORITY (Phase 9)
+## MEDIUM PRIORITY — Schema Alignment (Phase 2)
 
-### Testing Framework Setup
+- [ ] **2.1** — Decide: Rename lat/lng to latitude/longitude for clarity?
+- [ ] **2.2** — Decide: Timestamp storage mode (integer vs text)?
+- [ ] **2.3** — Add notNull constraint to pipelineRuns.startedAt
 
-- [ ] **9.1** — Install test framework (Vitest or Jest)
-- [ ] **9.2** — Install @testing-library/react
-- [ ] **9.3** — Configure test scripts in package.json
-- [ ] **9.4** — Write unit tests for query functions
-- [ ] **9.5** — Write component tests for critical UI
-- [ ] **9.6** — Add E2E tests with Playwright
-- [ ] **9.7** — Set up CI test runner
+---
+
+## LOW PRIORITY — Testing (Phase 9)
+
+- [ ] **9.1** — Install Vitest + @testing-library/react
+- [ ] **9.2** — Configure test scripts in package.json
+- [ ] **9.3** — Write unit tests for query functions
+- [ ] **9.4** — Write component tests for critical UI
+- [ ] **9.5** — Add E2E tests with Playwright
+- [ ] **9.6** — Set up CI test runner
 
 ---
 
@@ -168,11 +213,11 @@ Last updated: 2026-01-29 — Voice API fixes (4.1, 4.4, CQ.1) complete
 ### Phase 2: Database Schema
 - [x] 7 tables: agencies, agents, suburbs, agentSuburbs, sales, reviews, pipelineRuns
 - [x] Drizzle ORM 0.38.0 with SQLite
-- [x] FTS5 virtual tables: agents_fts, agencies_fts, suburbs_fts
+- [x] FTS5 virtual tables: agents_fts, agencies_fts, suburbs_fts (manual SQL)
 - [x] Auto-sync triggers for FTS tables
 - [x] 17,503 suburbs seeded from Matthew Proctor CSV
 - [x] WAL mode, foreign keys enabled
-- [x] Comprehensive indexes on query patterns
+- [x] Comprehensive indexes
 
 ### Phase 3: Data Pipeline (Core)
 - [x] `pipeline/scripts/pipeline.ts` v2 CLI with multi-phase architecture
@@ -186,18 +231,18 @@ Last updated: 2026-01-29 — Voice API fixes (4.1, 4.4, CQ.1) complete
 ### Phase 3.5: Query Helpers (Core)
 - [x] Agent queries: getAgentBySlug, getAgentsList, getSimilarAgents, getAgentCount
 - [x] Agency queries: getAgencyBySlug, getAgenciesList, getAgencyCount
-- [x] Suburb queries: getSuburbBySlug, getSuburbsList, getNearbySuburbs, getTopSuburbs
-- [x] Search queries: searchFTS, autocompleteFTS (with FTS5 fallback handling)
+- [x] Suburb queries: getSuburbBySlug, getSuburbsList, getNearbySuburbs, getTopSuburbs, getTopAgentsInSuburb
+- [x] Search queries: searchFTS, autocompleteFTS (with FTS5 fallback)
 - [x] Stats queries: getSiteStats, getStateStats, getSuburbMarketStats (partial)
 
 ### Phase 4: API Routes (Core)
-- [x] GET /api/search — Full-text search across entities
-- [x] GET /api/search/autocomplete — Prefix-based suggestions
-- [x] GET /api/agents — Paginated agent list with filters
+- [x] GET /api/search — Full-text search
+- [x] GET /api/search/autocomplete — Prefix suggestions
+- [x] GET /api/agents — Paginated list with filters
 - [x] GET /api/agent/[slug] — Single agent with relations
 - [x] GET /api/agency/[slug] — Single agency with agents
 - [x] GET /api/suburb/[slug] — Suburb market data (partial)
-- [x] GET /api/voice/signed-url — ElevenLabs signed URL (needs POST + fields)
+- [x] POST /api/voice/signed-url — ElevenLabs signed URL with overrides
 - [x] POST /api/revalidate — ISR trigger with auth
 - [x] GET /api/og — Dynamic OG image generation
 
@@ -205,12 +250,12 @@ Last updated: 2026-01-29 — Voice API fixes (4.1, 4.4, CQ.1) complete
 - [x] Core: Button, Card, Badge, Input, StarRating, Pagination, Skeleton, StatCard
 - [x] Domain: AgentCard, AgentPhoto, SuburbBadge, PriceDisplay, PropertyTypeIcon, Table
 - [x] Layout: Breadcrumb, SearchBar, FilterBar, GlobalNav, GlobalFooter
-- [x] Voice: VoiceProvider, VoicePanel, VoiceButton, AudioWaveform
+- [x] Voice: VoiceProvider, VoicePanel, VoiceButton, AudioWaveform, VoiceContextSetter, VoiceLayoutWrapper
 
 ### Phase 6: Pages (Core)
 - [x] Home page (`/`) with hero, featured suburbs, how-it-works, stats
 - [x] Agent profile (`/agent/[slug]`) with sales, reviews, similar agents
-- [x] Suburb listing (`/agents/[state]/[suburb-slug]`) with filters, pagination
+- [x] Suburb listing (`/agents/[state]/[suburb-slug]`) with filters, pagination, nearby suburbs
 - [x] Agency profile (`/agency/[slug]`) with agent roster
 - [x] Agencies list (`/agencies`) with state filtering
 - [x] State listing (`/agents/[state]`) with suburb grid
@@ -225,16 +270,18 @@ Last updated: 2026-01-29 — Voice API fixes (4.1, 4.4, CQ.1) complete
 - [x] Metadata helpers for all page types
 - [x] OG image generation via @vercel/og
 - [x] Canonical tags on all pages
-- [x] metadataBase configured (agentindex.com.au)
+- [x] metadataBase configured
 
-### Phase 8: Voice (Complete)
-- [x] @elevenlabs/react v0.13.1 installed
+### Phase 8: Voice Integration
+- [x] @elevenlabs/react integration with useConversation
 - [x] Voice types, prompts, context builders, tools
-- [x] VoiceProvider, VoicePanel, VoiceButton, AudioWaveform components
-- [x] VoiceLayoutWrapper integrated into layout.tsx
-- [x] Page-specific VoiceContextSetter on agent/agency/suburb pages
-- [x] getTopAgentsInSuburb query for suburb voice context
-- [x] ElevenLabs agent "AgentIndex Voice Agent" (gpt-4o, 6 client tools)
+- [x] VoiceProvider with session management + 5min timeout
+- [x] VoicePanel with all UI states (idle, connecting, connected, error)
+- [x] VoiceLayoutWrapper for page type detection
+- [x] VoiceContextSetter for personalized labels
+- [x] 6 Navigator tools + 1 Assistant tool
+- [x] Mode switching via custom events
+- [x] ElevenLabs agent configured (ID: agent_1201kg32hgw3ebvskwnngc4qcy8w)
 
 ---
 
@@ -243,20 +290,17 @@ Last updated: 2026-01-29 — Voice API fixes (4.1, 4.4, CQ.1) complete
 - better-sqlite3 needs `serverExternalPackages` in next.config.ts
 - pnpm 10: `pnpm.onlyBuiltDependencies` in package.json for native modules
 - Tailwind 4: CSS @theme, no tailwind.config.js
-- ESLint 9: `eslint .` not `next lint` (deprecated)
-- FTS5 migration: manual SQL via db.exec() (not in Drizzle journal)
+- ESLint 9: `eslint .` not `next lint`
+- FTS5: manual SQL via db.exec() (not in Drizzle journal)
 - Next.js 15: params/searchParams are Promises — must await
-- SuburbBadge: route must be `/agents/{state}/{slug}` not `/suburb/{slug}`
-- Voice: VoiceProvider must wrap app in layout.tsx to activate
-- @elevenlabs/react clientTools type: `Record<string, (params) => Promise<string|number|void>|...>`
-- ElevenLabs signed URL: POST endpoint with agent_id in body
-- VoiceLayoutWrapper pattern: client wrapper using usePathname() to detect page context
-- Pipeline directory must be excluded from tsconfig.json to avoid Next.js build conflicts
-- Claude Agent SDK query() returns AsyncGenerator, iterate with `for await`
-- SDK options: allowedTools, maxTurns, maxBudgetUsd (no direct 'model' param at top level)
-- next.config.ts webpack watchOptions: exclude non-Next.js directories
-- AgentPhoto component: needs null checks for firstName/lastName
-- Sample data seeder approach: MVP demos while AI pipeline is refined
+- SuburbBadge: route must be `/agents/{state}/{slug}`
+- Voice: VoiceProvider must wrap app in layout.tsx
+- ElevenLabs: POST to `get-signed-url` (hyphen not underscore)
+- VoiceLayoutWrapper: client wrapper using usePathname() for page detection
+- Pipeline: exclude from tsconfig.json to avoid Next.js build conflicts
+- Claude Agent SDK: query() returns AsyncGenerator, iterate with `for await`
+- Sample data seeder: MVP demos while AI pipeline is refined
+- SQLite ALTER TABLE for adding columns: run manually when drizzle-kit push would delete FTS tables
 
 ---
 
@@ -268,9 +312,8 @@ Last verified: 2026-01-29
 - [x] ESLint: `pnpm lint` passes
 - [x] Build: `pnpm build` passes (21 routes)
 - [ ] Tests: No test suite (Phase 9)
-- [x] Sample data: Seeded via scripts/seed-sample-data.ts
-- [x] Voice code: Complete (Phase 8.0-8.2, 8.4)
-- [x] Voice active: ElevenLabs configured (Phase 8.3)
+- [x] Sample data seeded
+- [x] Voice working end-to-end
 
 ---
 
@@ -279,18 +322,18 @@ Last verified: 2026-01-29
 | Entity | Count | Status |
 |--------|-------|--------|
 | Suburbs | 17,503 | Seeded from CSV |
-| Agents | 7 | Sample data seeded |
-| Agencies | 3 | Sample data seeded |
-| Sales | 14 | Sample data seeded |
-| Reviews | 12 | Sample data seeded |
-| FTS Tables | 3 | Ready (populated) |
+| Agents | 7 | Sample data |
+| Agencies | 3 | Sample data |
+| Sales | 14 | Sample data |
+| Reviews | 12 | Sample data |
+| FTS Tables | 3 | Populated |
 
 ---
 
 ## Unresolved Questions
 
-1. ~~**ElevenLabs agent** — Created in dashboard yet?~~ RESOLVED: Agent ID `agent_1201kg32hgw3ebvskwnngc4qcy8w`
-2. ~~**ElevenLabs LLM** — gpt-4o or claude-3-5-sonnet?~~ RESOLVED: Using gpt-4o
-3. **Image storage** — Use local `public/` or external CDN (S3, Cloudflare R2)?
-4. **Pipeline hosting** — Run locally, in CI, or as background job?
-5. ~~**API spec** — Should voice endpoint use GET or POST?~~ RESOLVED: POST (fixed elevenlabs.ts)
+1. **Image storage** — Use local `public/` or external CDN (S3, Cloudflare R2)?
+2. **Pipeline hosting** — Run locally, in CI, or as background job?
+3. **Response wrapper** — Keep `{success,data}` wrapper or flatten per spec?
+4. **Demographics data** — Where to source (ABS, external API)?
+5. **Market stats** — Where to source YoY, clearance rate, rental yield?

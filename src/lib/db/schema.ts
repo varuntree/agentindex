@@ -121,6 +121,17 @@ export const suburbs = sqliteTable(
     totalAgents: integer("total_agents").default(0),
     medianHousePrice: real("median_house_price"),
     medianUnitPrice: real("median_unit_price"),
+    // Market stats (populated by pipeline)
+    medianPrice: real("median_price"),
+    priceChangeYoy: real("price_change_yoy"),
+    salesVolume12m: integer("sales_volume_12m"),
+    avgDaysOnMarket: real("avg_days_on_market"),
+    clearanceRate: real("clearance_rate"),
+    rentalYield: real("rental_yield"),
+    // Demographics (populated by pipeline)
+    population: integer("population"),
+    medianAge: integer("median_age"),
+    medianHouseholdIncome: integer("median_household_income"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),

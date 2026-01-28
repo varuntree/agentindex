@@ -694,9 +694,26 @@ export async function getStateStats(state: string): Promise<{
   };
 }
 
+export type SuburbMarketStats = {
+  medianPrice: number | null;
+  medianPriceHouse: number | null;
+  medianPriceApartment: number | null;
+  priceChangeYoy: number | null;
+  salesVolume12m: number | null;
+  avgDaysOnMarket: number | null;
+  clearanceRate: number | null;
+  rentalYield: number | null;
+};
+
+export type SuburbDemographics = {
+  population: number | null;
+  medianAge: number | null;
+  medianHouseholdIncome: number | null;
+};
+
 export async function getSuburbMarketStats(suburbSlug: string): Promise<{
-  medianHousePrice: number | null;
-  medianUnitPrice: number | null;
+  marketStats: SuburbMarketStats;
+  demographics: SuburbDemographics;
   totalAgents: number;
 }> {
   const sub = db.query.suburbs
@@ -706,13 +723,141 @@ export async function getSuburbMarketStats(suburbSlug: string): Promise<{
     .sync();
 
   if (!sub) {
-    return { medianHousePrice: null, medianUnitPrice: null, totalAgents: 0 };
+    return {
+      marketStats: {
+        medianPrice: null,
+        medianPriceHouse: null,
+        medianPriceApartment: null,
+        priceChangeYoy: null,
+        salesVolume12m: null,
+        avgDaysOnMarket: null,
+        clearanceRate: null,
+        rentalYield: null,
+      },
+      demographics: {
+        population: null,
+        medianAge: null,
+        medianHouseholdIncome: null,
+      },
+      totalAgents: 0,
+    };
   }
 
   return {
-    medianHousePrice: sub.medianHousePrice,
-    medianUnitPrice: sub.medianUnitPrice,
+    marketStats: {
+      medianPrice: sub.medianPrice ?? sub.medianHousePrice,
+      medianPriceHouse: sub.medianHousePrice,
+      medianPriceApartment: sub.medianUnitPrice,
+      priceChangeYoy: sub.priceChangeYoy,
+      salesVolume12m: sub.salesVolume12m,
+      avgDaysOnMarket: sub.avgDaysOnMarket,
+      clearanceRate: sub.clearanceRate,
+      rentalYield: sub.rentalYield,
+    },
+    demographics: {
+      population: sub.population,
+      medianAge: sub.medianAge,
+      medianHouseholdIncome: sub.medianHouseholdIncome,
+    },
     totalAgents: sub.totalAgents ?? 0,
+  };
+}
+
+/** Get paginated list of agents for a suburb */
+export async function getAgentsBySuburb(filters: {
+  suburbSlug: string;
+  sort?: "sales_count" | "avg_price" | "name" | "rating";
+  page?: number;
+  limit?: number;
+}): Promise<{
+  agents: {
+    id: number;
+    slug: string;
+    fullName: string;
+    photoUrl: string | null;
+    agencyName: string | null;
+    agencyLogoUrl: string | null;
+    salesCountSuburb: number;
+    avgSalePriceSuburb: number | null;
+    totalSalesCount: number;
+    avgRating: number | null;
+  }[];
+  total: number;
+}> {
+  const pageSize = Math.min(filters.limit ?? 20, 50);
+  const page = filters.page ?? 1;
+  const offset = (page - 1) * pageSize;
+
+  // Determine ORDER BY
+  let orderBy: string;
+  switch (filters.sort) {
+    case "avg_price":
+      orderBy = "a.median_sale_price DESC NULLS LAST";
+      break;
+    case "name":
+      orderBy = "a.full_name ASC";
+      break;
+    case "rating":
+      orderBy = "a.ratings_average DESC NULLS LAST";
+      break;
+    case "sales_count":
+    default:
+      orderBy = "asub.sales_count DESC NULLS LAST, a.total_sales_count DESC NULLS LAST";
+  }
+
+  const rows = sqliteDb
+    .prepare(
+      `SELECT
+         a.id, a.slug, a.full_name, a.photo_url,
+         a.total_sales_count, a.ratings_average, a.median_sale_price,
+         ag.name AS agency_name, ag.logo_url AS agency_logo_url,
+         asub.sales_count AS sales_count_suburb
+       FROM agents a
+       INNER JOIN agent_suburbs asub ON a.id = asub.agent_id
+       INNER JOIN suburbs s ON s.id = asub.suburb_id
+       LEFT JOIN agencies ag ON a.agency_id = ag.id
+       WHERE s.slug = ?
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`
+    )
+    .all(filters.suburbSlug, pageSize, offset) as {
+    id: number;
+    slug: string;
+    full_name: string;
+    photo_url: string | null;
+    total_sales_count: number | null;
+    ratings_average: number | null;
+    median_sale_price: number | null;
+    agency_name: string | null;
+    agency_logo_url: string | null;
+    sales_count_suburb: number | null;
+  }[];
+
+  // Get total count
+  const countResult = sqliteDb
+    .prepare(
+      `SELECT COUNT(*) as cnt
+       FROM agents a
+       INNER JOIN agent_suburbs asub ON a.id = asub.agent_id
+       INNER JOIN suburbs s ON s.id = asub.suburb_id
+       WHERE s.slug = ?`
+    )
+    .get(filters.suburbSlug) as { cnt: number };
+
+  return {
+    agents: rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      fullName: r.full_name,
+      photoUrl: r.photo_url,
+      agencyName: r.agency_name,
+      agencyLogoUrl: r.agency_logo_url,
+      salesCountSuburb: r.sales_count_suburb ?? 0,
+      avgSalePriceSuburb: r.median_sale_price,
+      totalSalesCount: r.total_sales_count ?? 0,
+      avgRating: r.ratings_average,
+    })),
+    total: countResult?.cnt ?? 0,
   };
 }
 

@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Mic } from 'lucide-react';
 import { SearchBar } from '@/components/search/search-bar';
+import { useVoice } from '@/components/voice';
 
 const navLinks = [
   { label: 'Agents', href: '/agents' },
@@ -12,6 +13,13 @@ const navLinks = [
 
 export function GlobalNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { startSession, status } = useVoice();
+
+  const handleVoiceClick = () => {
+    if (status === 'idle') {
+      startSession();
+    }
+  };
 
   return (
     <>
@@ -28,8 +36,8 @@ export function GlobalNav() {
             <SearchBar size="sm" />
           </div>
 
-          {/* Right: desktop nav links */}
-          <div className="hidden md:flex items-center gap-6">
+          {/* Right: desktop nav links + voice button */}
+          <div className="hidden md:flex items-center gap-4">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -39,6 +47,16 @@ export function GlobalNav() {
                 {link.label}
               </Link>
             ))}
+            {/* Voice Navigator Button */}
+            <button
+              onClick={handleVoiceClick}
+              disabled={status !== 'idle'}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Ask Navigator"
+            >
+              <Mic className="w-4 h-4" />
+              <span>Ask Navigator</span>
+            </button>
           </div>
 
           {/* Mobile hamburger */}
@@ -78,6 +96,20 @@ export function GlobalNav() {
           <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
             {/* SearchBar at top */}
             <SearchBar size="sm" />
+
+            {/* Voice Navigator Button - mobile */}
+            <button
+              onClick={() => {
+                setMobileOpen(false);
+                handleVoiceClick();
+              }}
+              disabled={status !== 'idle'}
+              className="w-full flex items-center justify-center gap-2 bg-primary text-white px-4 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Ask Navigator"
+            >
+              <Mic className="w-5 h-5" />
+              <span>Ask Navigator</span>
+            </button>
 
             {/* Nav links stacked */}
             <nav className="flex flex-col gap-4">

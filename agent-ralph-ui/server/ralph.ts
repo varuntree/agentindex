@@ -1,0 +1,221 @@
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { broadcast } from "./ws.js";
+import type { LoopState, SdkMessagePayload, ContentBlock } from "./types.js";
+
+const execAsync = promisify(exec);
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROMPT_DIR = resolve(__dirname, "../../agent-ralph");
+const PROJECT_ROOT = resolve(__dirname, "../..");
+
+let state: LoopState = {
+  mode: "build",
+  iteration: 0,
+  maxIterations: 0,
+  running: false,
+  totalCostUsd: 0,
+  totalDurationMs: 0,
+};
+
+let abortController: AbortController | null = null;
+
+export function getState(): LoopState {
+  return { ...state };
+}
+
+export function stopLoop() {
+  state.running = false;
+  abortController?.abort();
+  broadcast({ type: "loop:complete", reason: "stopped" });
+}
+
+function parseContentBlocks(content: unknown[]): ContentBlock[] {
+  if (!Array.isArray(content)) return [];
+  return content.map((block: Record<string, unknown>) => ({
+    type: block.type as ContentBlock["type"],
+    text: block.text as string | undefined,
+    id: block.id as string | undefined,
+    name: block.name as string | undefined,
+    input: block.input as Record<string, unknown> | undefined,
+  }));
+}
+
+function toMessagePayload(msg: Record<string, unknown>): SdkMessagePayload {
+  const msgType = msg.type as string;
+  const parentToolUseId = (msg.parent_tool_use_id as string) ?? null;
+  const sessionId = msg.session_id as string | undefined;
+
+  const payload: SdkMessagePayload = {
+    messageType: msgType,
+    parentToolUseId,
+    sessionId,
+  };
+
+  if (msgType === "assistant") {
+    const message = msg.message as Record<string, unknown> | undefined;
+    if (message?.content) {
+      payload.content = parseContentBlocks(message.content as unknown[]);
+    }
+  }
+
+  if (msgType === "result") {
+    payload.result = msg.result as string | undefined;
+    payload.costUsd = msg.total_cost_usd as number | undefined;
+    payload.durationMs = msg.duration_ms as number | undefined;
+    payload.numTurns = msg.num_turns as number | undefined;
+    payload.subtype = msg.subtype as string | undefined;
+  }
+
+  // Partial message — extract streaming text
+  if (msgType === "partial") {
+    const event = msg.event as Record<string, unknown> | undefined;
+    const delta = event?.delta as Record<string, unknown> | undefined;
+    if (delta?.type === "text_delta") {
+      payload.partialText = delta.text as string;
+    }
+  }
+
+  return payload;
+}
+
+async function gitPush() {
+  broadcast({ type: "git:push:start" });
+  try {
+    const { stdout } = await execAsync("git push origin $(git branch --show-current)", {
+      cwd: PROJECT_ROOT,
+    });
+    console.log("[git] push:", stdout.trim());
+    broadcast({ type: "git:push:complete", success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[git] push failed:", message);
+    // Try creating remote branch
+    try {
+      await execAsync("git push -u origin $(git branch --show-current)", {
+        cwd: PROJECT_ROOT,
+      });
+      broadcast({ type: "git:push:complete", success: true });
+    } catch {
+      broadcast({ type: "git:push:complete", success: false, error: message });
+    }
+  }
+}
+
+export async function startLoop(mode: "plan" | "build", maxIterations: number) {
+  if (state.running) {
+    broadcast({ type: "error", message: "Loop already running" });
+    return;
+  }
+
+  const promptFile = mode === "plan" ? "PROMPT_plan.md" : "PROMPT_build.md";
+  let promptContent: string;
+  try {
+    promptContent = readFileSync(resolve(PROMPT_DIR, promptFile), "utf-8");
+  } catch (err) {
+    broadcast({
+      type: "error",
+      message: `Failed to read ${promptFile}: ${err instanceof Error ? err.message : err}`,
+    });
+    return;
+  }
+
+  state = {
+    mode,
+    maxIterations,
+    iteration: 0,
+    running: true,
+    totalCostUsd: 0,
+    totalDurationMs: 0,
+  };
+  abortController = new AbortController();
+
+  broadcast({ type: "loop:start", mode, maxIterations });
+  console.log(`[ralph] starting ${mode} mode, max iterations: ${maxIterations || "unlimited"}`);
+
+  try {
+    // Dynamic import — SDK may not be installed yet
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+
+    while (state.running) {
+      if (maxIterations > 0 && state.iteration >= maxIterations) {
+        broadcast({ type: "loop:complete", reason: "max_iterations" });
+        break;
+      }
+
+      state.iteration++;
+      broadcast({ type: "iteration:start", iteration: state.iteration });
+      console.log(`[ralph] iteration ${state.iteration}`);
+
+      const q = query({
+        prompt: promptContent,
+        options: {
+          model: "claude-opus-4-5-20251101",
+          cwd: PROJECT_ROOT,
+          permissionMode: "bypassPermissions",
+          includePartialMessages: true,
+          abortController,
+        },
+      });
+
+      for await (const message of q) {
+        const msg = message as Record<string, unknown>;
+        const payload = toMessagePayload(msg);
+
+        // Detect subagent spawns from Task tool_use blocks
+        if (payload.messageType === "assistant" && !payload.parentToolUseId && payload.content) {
+          for (const block of payload.content) {
+            if (block.type === "tool_use" && block.name === "Task" && block.id) {
+              const input = block.input || {};
+              broadcast({
+                type: "subagent:start",
+                agentId: block.id,
+                agentType: (input.subagent_type as string) || "unknown",
+                description: (input.description as string) || "",
+              });
+            }
+          }
+        }
+
+        broadcast({ type: "sdk:message", message: payload });
+
+        // Iteration complete
+        if (payload.messageType === "result") {
+          const cost = payload.costUsd || 0;
+          const duration = payload.durationMs || 0;
+          state.totalCostUsd += cost;
+          state.totalDurationMs += duration;
+          broadcast({
+            type: "iteration:complete",
+            iteration: state.iteration,
+            cost,
+            duration,
+            totalCost: state.totalCostUsd,
+            totalDuration: state.totalDurationMs,
+          });
+        }
+      }
+
+      // Git push after iteration
+      if (state.running) {
+        await gitPush();
+      }
+    }
+  } catch (err) {
+    if (abortController?.signal.aborted) {
+      console.log("[ralph] aborted");
+      broadcast({ type: "loop:complete", reason: "stopped" });
+    } else {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[ralph] error:", message);
+      broadcast({ type: "error", message });
+      broadcast({ type: "loop:complete", reason: "error" });
+    }
+  } finally {
+    state.running = false;
+    abortController = null;
+  }
+}

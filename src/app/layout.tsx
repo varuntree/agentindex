@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat, Inter, Fraunces } from "next/font/google";
 import { GlobalNav } from "@/components/navigation/global-nav";
 import { GlobalFooter } from "@/components/navigation/global-footer";
+import { VoiceLayoutWrapper } from "@/components/voice";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -50,9 +51,11 @@ export default function RootLayout({
       className={`${montserrat.variable} ${inter.variable} ${fraunces.variable}`}
     >
       <body className="min-h-screen bg-white text-gray-900 antialiased">
-        <GlobalNav />
-        <main className="min-h-screen">{children}</main>
-        <GlobalFooter />
+        <VoiceLayoutWrapper>
+          <GlobalNav />
+          <main className="min-h-screen">{children}</main>
+          <GlobalFooter />
+        </VoiceLayoutWrapper>
       </body>
     </html>
   );

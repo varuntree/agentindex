@@ -1,6 +1,6 @@
 # AgentIndex Implementation Plan
 
-Last updated: 2026-01-28 — Phase 8.0 completed
+Last updated: 2026-01-28 — Phase 8.1 completed
 
 ---
 
@@ -16,7 +16,8 @@ Last updated: 2026-01-28 — Phase 8.0 completed
 | Phase 5: UI Components | **Complete** | 19 components, all typed |
 | Phase 6: Pages | **Complete** | 7 page types with loading skeletons |
 | Phase 7: SEO | **Complete** | JSON-LD, sitemap, OG images, canonical tags |
-| Phase 8: Voice Integration | **~90% Complete** | Code complete, needs layout integration + ElevenLabs config |
+| Phase 8: Voice Integration | **~95% Complete** | Layout integration done (8.1), ElevenLabs config pending |
+| Phase 8.1: Layout Integration | **Complete** | VoiceLayoutWrapper created, auto-detects context |
 | Phase 9: Testing & QA | **NOT STARTED** | No test framework installed |
 
 ---
@@ -129,12 +130,10 @@ Last updated: 2026-01-28 — Phase 8.0 completed
 **Status:** All code implemented. Needs layout integration and ElevenLabs dashboard setup.
 **Blocker:** Requires ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ID in .env.local
 
-#### 8.1 Integrate VoiceProvider into App
-- [ ] **8.1.1** — Update `src/app/layout.tsx` to wrap app with `<VoiceProvider>`
-- [ ] **8.1.2** — Pass default pageType and slug from layout
-- [ ] **8.1.3** — Verify voice button appears on all pages
-
-**Playwright verify:** Start dev server, visit `/`, confirm floating voice button visible in bottom-right corner.
+#### 8.1 Integrate VoiceProvider into App ✓
+- [x] **8.1.1** — VoiceLayoutWrapper created and integrated into layout.tsx
+- [x] **8.1.2** — VoiceLayoutWrapper auto-detects pageType and slug from pathname
+- [x] **8.1.3** — Voice button verified visible on all pages (desktop and mobile)
 
 #### 8.2 Page-Specific Voice Context
 - [ ] **8.2.1** — Update `/agent/[slug]/page.tsx` to pass agent context to VoiceProvider
@@ -207,6 +206,7 @@ mcp__playwright__browser_snapshot → copy agent ID
 - Voice: VoiceProvider must wrap app in layout.tsx to activate
 - @elevenlabs/react clientTools type: `Record<string, (params) => Promise<string|number|void>|...>`
 - ElevenLabs signed URL: GET endpoint with agent_id query param, returns `signed_url` field
+- VoiceLayoutWrapper pattern: client wrapper using usePathname() to detect page context for layout-level voice integration
 
 ---
 
@@ -230,7 +230,7 @@ Last verified: 2026-01-28
 - [ ] Tests: No test suite (Phase 9)
 - [ ] Pipeline: Not implemented (Phase 3)
 - [x] Voice code: Complete (Phase 8.0)
-- [ ] Voice active: Needs layout integration (Phase 8.1)
+- [x] Voice active: Layout integration complete (Phase 8.1)
 
 ---
 

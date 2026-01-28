@@ -72,7 +72,7 @@ export async function getAgentsList(filters: {
   agency?: string;
   state?: string;
   propertyType?: string;
-  sort?: "rating" | "sales" | "name" | "quality";
+  sort?: "sales_count" | "avg_price" | "name";
   page?: number;
   limit?: number;
 }): Promise<{ agents: Agent[]; total: number }> {
@@ -109,20 +109,17 @@ export async function getAgentsList(filters: {
   // Determine ORDER BY
   let orderBy: string;
   switch (filters.sort) {
-    case "rating":
-      orderBy = "a.ratings_average DESC NULLS LAST";
-      break;
-    case "sales":
+    case "sales_count":
       orderBy = "a.total_sales_count DESC NULLS LAST";
+      break;
+    case "avg_price":
+      orderBy = "a.median_sale_price DESC NULLS LAST";
       break;
     case "name":
       orderBy = "a.full_name ASC";
       break;
-    case "quality":
-      orderBy = "a.data_quality_score DESC NULLS LAST";
-      break;
     default:
-      orderBy = "a.ratings_average DESC NULLS LAST";
+      orderBy = "a.total_sales_count DESC NULLS LAST";
   }
 
   // Get paginated results

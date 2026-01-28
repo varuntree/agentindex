@@ -44,9 +44,9 @@ None. All blocking items resolved.
 ### API Response Shape (affects all consumers)
 
 - [x] **4.5** — All endpoints: Flatten responses (remove `{success,data}` wrapper, return data directly)
-- [ ] **4.6** — `/api/agents`: Fix sort param values (spec: `sales_count`/`avg_price`/`name`; impl: `rating`/`sales`/`name`/`quality`)
-- [ ] **4.7** — `/api/agents`: Add `suburb` context object when filtering by suburb
-- [ ] **4.8** — `/api/agents`: Fix pagination field name (`totalPages` → `pages` per spec)
+- [x] **4.6** — `/api/agents`: Fix sort param values (spec: `sales_count`/`avg_price`/`name`; impl: `rating`/`sales`/`name`/`quality`)
+- [x] **4.7** — `/api/agents`: Add `suburb` context object when filtering by suburb
+- [x] **4.8** — `/api/agents`: Fix pagination field name (`totalPages` → `pages` per spec)
 - [ ] **4.9** — `/api/voice/signed-url`: Change request body to use separate slug fields (`agentSlug`, `agencySlug`, `suburbSlug`) per spec
 - [x] **4.3** — `/api/suburb/[slug]`: Add `demographics`, `agents` list, `pagination` params
 

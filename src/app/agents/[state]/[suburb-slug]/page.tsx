@@ -102,7 +102,7 @@ export default async function SuburbPage({
 
   const fullStateName = STATES[state];
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
-  const sort = (sortParam as "rating" | "sales" | "name" | "quality") ?? "sales";
+  const sort = (sortParam as "sales_count" | "avg_price" | "name") ?? "sales_count";
   const limit = 20;
 
   const [suburbStats, { agents, total }] = await Promise.all([

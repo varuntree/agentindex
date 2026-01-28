@@ -313,6 +313,7 @@ export default async function AgentProfilePage({
                   key={as.suburb.slug}
                   name={as.suburb.name}
                   slug={as.suburb.slug}
+                  state={as.suburb.state}
                   isPrimary={idx === 0}
                 />
               ) : null

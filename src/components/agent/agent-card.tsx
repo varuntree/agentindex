@@ -9,6 +9,7 @@ import { formatNumber, formatCompactPrice } from "@/lib/utils/format";
 interface AgentSuburb {
   name: string;
   slug: string;
+  state: string;
 }
 
 interface Agent {
@@ -115,6 +116,7 @@ function AgentCard({ agent, className = "" }: AgentCardProps) {
                 key={suburb.slug}
                 name={suburb.name}
                 slug={suburb.slug}
+                state={suburb.state}
                 isPrimary={idx === 0}
               />
             ))}

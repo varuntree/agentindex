@@ -1,6 +1,6 @@
 # AgentIndex Implementation Plan
 
-Last updated: 2026-01-28 — tag 0.0.4
+Last updated: 2026-01-28 — tag 0.0.5
 
 ---
 
@@ -24,6 +24,7 @@ Build status: typecheck + lint + build all pass (21 routes)
 - ESLint 9: `eslint .` not `next lint` (deprecated). Needs `@eslint/eslintrc`. Exclude agent-ralph-ui/, agent-ralph/, ralph/
 - FTS5 migration: manual SQL via db.exec() (not in Drizzle journal)
 - Next.js 15: params/searchParams are Promises — must await
+- SuburbBadge: route must be `/agents/{state}/{slug}` not `/suburb/{slug}`; requires state prop
 
 ---
 
@@ -32,7 +33,7 @@ Build status: typecheck + lint + build all pass (21 routes)
 ### Phase 7 remaining: SEO
 - [x] **7.9** — Canonical tags: self-referencing every page; paginated/sorted → canonical = page 1 default sort ✓
 - [x] **7.10** — OG image generation via @vercel/og (edge route /api/og, 4 variants: home/agent/suburb/agency) ✓
-- [ ] **7.11** — Internal linking audit: verify link density
+- [x] **7.11** — Internal linking audit: verify link density; fixed SuburbBadge broken route ✓
 
 ### Phase 8: Voice Integration
 - [ ] **8.0** — Install @elevenlabs/react
@@ -43,7 +44,7 @@ Build status: typecheck + lint + build all pass (21 routes)
 - [ ] **8.6-8.7** — System prompts (navigator + 3 assistant variants)
 - [ ] **8.8** — Context data fetchers
 - [ ] **8.9-8.10** — Voice UI states + mobile bottom sheet
-- Voice UI components (VoiceButton, VoicePanel, VoiceProvider) created but not wired to ElevenLabs
+- Voice UI components (VoiceButton, VoicePanel, VoiceProvider) created but not wired to ElevenLabs  
 
 ### Phase 3: Data Pipeline
 - [ ] **3.1** — Zod schemas (AgencyOutput, AgentOutput, SaleOutput, ReviewOutput)

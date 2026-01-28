@@ -28,12 +28,14 @@ export function VoiceLayoutWrapper({ children }: VoiceLayoutWrapperProps) {
   const pathname = usePathname();
 
   // Detect page type and slug from pathname
-  const { pageType, slug } = detectPageContext(pathname);
+  const { pageType, agentSlug, agencySlug, suburbSlug } = detectPageContext(pathname);
 
   return (
     <VoiceProvider
       pageType={pageType}
-      slug={slug}
+      agentSlug={agentSlug}
+      agencySlug={agencySlug}
+      suburbSlug={suburbSlug}
       defaultMode="navigator"
     >
       {children}
@@ -41,23 +43,28 @@ export function VoiceLayoutWrapper({ children }: VoiceLayoutWrapperProps) {
   );
 }
 
-function detectPageContext(pathname: string): { pageType: PageType; slug?: string } {
+function detectPageContext(pathname: string): {
+  pageType: PageType;
+  agentSlug?: string;
+  agencySlug?: string;
+  suburbSlug?: string;
+} {
   // /agent/[slug]
   const agentMatch = pathname.match(/^\/agent\/([^/]+)$/);
   if (agentMatch) {
-    return { pageType: 'agent', slug: agentMatch[1] };
+    return { pageType: 'agent', agentSlug: agentMatch[1] };
   }
 
   // /agency/[slug]
   const agencyMatch = pathname.match(/^\/agency\/([^/]+)$/);
   if (agencyMatch) {
-    return { pageType: 'agency', slug: agencyMatch[1] };
+    return { pageType: 'agency', agencySlug: agencyMatch[1] };
   }
 
   // /agents/[state]/[suburb-slug] → suburb page
   const suburbMatch = pathname.match(/^\/agents\/([^/]+)\/([^/]+)$/);
   if (suburbMatch) {
-    return { pageType: 'suburb', slug: suburbMatch[2] };
+    return { pageType: 'suburb', suburbSlug: suburbMatch[2] };
   }
 
   // Default: home/navigator mode

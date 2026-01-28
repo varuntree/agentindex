@@ -10,8 +10,10 @@ export type PageType = 'home' | 'agent' | 'agency' | 'suburb';
 
 export interface VoiceSessionRequest {
   pageType: PageType;
-  slug?: string;
   voiceMode: VoiceMode;
+  agentSlug?: string;
+  agencySlug?: string;
+  suburbSlug?: string;
   contextData?: {
     agent?: AgentVoiceContext;
     agency?: AgencyVoiceContext;

@@ -47,7 +47,7 @@ None. All blocking items resolved.
 - [x] **4.6** — `/api/agents`: Fix sort param values (spec: `sales_count`/`avg_price`/`name`; impl: `rating`/`sales`/`name`/`quality`)
 - [x] **4.7** — `/api/agents`: Add `suburb` context object when filtering by suburb
 - [x] **4.8** — `/api/agents`: Fix pagination field name (`totalPages` → `pages` per spec)
-- [ ] **4.9** — `/api/voice/signed-url`: Change request body to use separate slug fields (`agentSlug`, `agencySlug`, `suburbSlug`) per spec
+- [x] **4.9** — `/api/voice/signed-url`: Change request body to use separate slug fields (`agentSlug`, `agencySlug`, `suburbSlug`) per spec
 - [x] **4.3** — `/api/suburb/[slug]`: Add `demographics`, `agents` list, `pagination` params
 
 **Playwright verify:** `fetch('/api/agents?suburb=bondi-beach-nsw')` → check response includes suburb stats.

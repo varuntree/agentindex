@@ -45,7 +45,9 @@ export function useVoice() {
 interface VoiceProviderProps {
   children: ReactNode;
   pageType: PageType;
-  slug?: string;
+  agentSlug?: string;
+  agencySlug?: string;
+  suburbSlug?: string;
   agentData?: AgentVoiceContext;
   agencyData?: AgencyVoiceContext;
   suburbData?: SuburbVoiceContext;
@@ -58,7 +60,9 @@ const MAX_SESSION_DURATION = 5 * 60 * 1000;
 export function VoiceProvider({
   children,
   pageType,
-  slug,
+  agentSlug,
+  agencySlug,
+  suburbSlug,
   agentData,
   agencyData,
   suburbData,
@@ -113,7 +117,9 @@ export function VoiceProvider({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             pageType,
-            slug,
+            agentSlug,
+            agencySlug,
+            suburbSlug,
             voiceMode: mode,
             contextData: {
               agent: agentData,
@@ -159,7 +165,7 @@ export function VoiceProvider({
         setStatus('error');
       }
     },
-    [pageType, slug, agentData, agencyData, suburbData, conversation]
+    [pageType, agentSlug, agencySlug, suburbSlug, agentData, agencyData, suburbData, conversation]
   );
 
   // Mode change listener (must be after startSessionInternal is defined)

@@ -77,8 +77,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate slug length to prevent abuse
-    if (body.slug && body.slug.length > 200) {
+    // Validate slug lengths to prevent abuse
+    const slugFields = [body.agentSlug, body.agencySlug, body.suburbSlug].filter(Boolean);
+    if (slugFields.some((s) => s && s.length > 200)) {
       return NextResponse.json(
         { success: false, error: { message: 'Invalid slug', code: 'BAD_REQUEST' } },
         { status: 400 }
@@ -97,9 +98,10 @@ export async function POST(request: NextRequest) {
 
       // Get site stats for context
       const stats = await getSiteStats();
+      const currentSlug = body.agentSlug || body.agencySlug || body.suburbSlug || '';
       variables = {
         current_page: body.pageType,
-        current_slug: body.slug || '',
+        current_slug: currentSlug,
         total_agents: stats.totalAgents,
         total_suburbs: stats.totalSuburbs,
         total_agencies: stats.totalAgencies,
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Assistant mode - page-specific
       if (body.pageType === 'agent') {
-        const agentData = await fetchAgentContext(body.slug);
+        const agentData = await fetchAgentContext(body.agentSlug);
         if (!agentData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Agent not found' },
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
           agent_context: agentContext,
         };
       } else if (body.pageType === 'agency') {
-        const agencyData = await fetchAgencyContext(body.slug);
+        const agencyData = await fetchAgencyContext(body.agencySlug);
         if (!agencyData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Agency not found' },
@@ -144,7 +146,7 @@ export async function POST(request: NextRequest) {
           agency_context: agencyContext,
         };
       } else if (body.pageType === 'suburb') {
-        const suburbData = await fetchSuburbContext(body.slug);
+        const suburbData = await fetchSuburbContext(body.suburbSlug);
         if (!suburbData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Suburb not found' },

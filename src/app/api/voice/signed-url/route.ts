@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { serverError } from '@/lib/api/response';
+
 import { createSignedUrl, isElevenLabsConfigured } from '@/lib/voice/elevenlabs';
 import {
   getSiteStats,
@@ -76,6 +76,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate slug length to prevent abuse
+    if (body.slug && body.slug.length > 200) {
+      return NextResponse.json(
+        { success: false, error: { message: 'Invalid slug', code: 'BAD_REQUEST' } },
+        { status: 400 }
+      );
+    }
+
     const voiceMode = body.voiceMode || 'navigator';
     let systemPrompt = '';
     let variables: Record<string, unknown> = {};
@@ -98,7 +106,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Assistant mode - page-specific
       if (body.pageType === 'agent') {
-        const agentData = body.contextData?.agent || await fetchAgentContext(body.slug);
+        const agentData = await fetchAgentContext(body.slug);
         if (!agentData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Agent not found' },
@@ -119,7 +127,7 @@ export async function POST(request: NextRequest) {
           agent_context: agentContext,
         };
       } else if (body.pageType === 'agency') {
-        const agencyData = body.contextData?.agency || await fetchAgencyContext(body.slug);
+        const agencyData = await fetchAgencyContext(body.slug);
         if (!agencyData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Agency not found' },
@@ -135,7 +143,7 @@ export async function POST(request: NextRequest) {
           agency_context: agencyContext,
         };
       } else if (body.pageType === 'suburb') {
-        const suburbData = body.contextData?.suburb || await fetchSuburbContext(body.slug);
+        const suburbData = await fetchSuburbContext(body.slug);
         if (!suburbData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Suburb not found' },
@@ -186,7 +194,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (e) {
     console.error('Voice signed-url error:', e);
-    return serverError();
+    return NextResponse.json(
+      { success: false, error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    );
   }
 }
 

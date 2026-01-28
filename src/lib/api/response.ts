@@ -5,7 +5,10 @@ export function success<T>(data: T, status = 200) {
 }
 
 export function error(message: string, code: string, status = 400) {
-  return NextResponse.json({ success: false, error: { message, code } }, { status });
+  return NextResponse.json(
+    { success: false, error: { message, code } },
+    { status, headers: { 'Cache-Control': 'no-store' } }
+  );
 }
 
 export function notFound(message = 'Not found') {

@@ -80,101 +80,66 @@ export async function getAgentsList(filters: {
   const page = filters.page ?? 1;
   const offset = (page - 1) * pageSize;
 
-  const conditions: ReturnType<typeof eq>[] = [];
+  // Build WHERE clauses
+  const whereClauses: string[] = ["1=1"];
+  const params: (string | number)[] = [];
 
   if (filters.state) {
-    conditions.push(eq(agents.licenseState, filters.state));
+    whereClauses.push("a.license_state = ?");
+    params.push(filters.state);
   }
 
   if (filters.agency) {
-    const agency = db.query.agencies
-      .findFirst({
-        where: eq(agencies.slug, filters.agency),
-        columns: { id: true },
-      })
-      .sync();
-    if (agency) {
-      conditions.push(eq(agents.agencyId, agency.id));
-    }
+    whereClauses.push("EXISTS (SELECT 1 FROM agencies ag WHERE ag.id = a.agency_id AND ag.slug = ?)");
+    params.push(filters.agency);
   }
 
   if (filters.suburb) {
-    const sub = db.query.suburbs
-      .findFirst({
-        where: eq(suburbs.slug, filters.suburb),
-        columns: { id: true },
-      })
-      .sync();
-    if (sub) {
-      const agentIdsInSuburb = sqliteDb
-        .prepare("SELECT agent_id FROM agent_suburbs WHERE suburb_id = ?")
-        .all(sub.id) as { agent_id: number }[];
-      const ids = agentIdsInSuburb.map((r) => r.agent_id);
-      if (ids.length > 0) {
-        conditions.push(inArray(agents.id, ids));
-      } else {
-        return { agents: [], total: 0 };
-      }
-    }
+    whereClauses.push("EXISTS (SELECT 1 FROM agent_suburbs asub JOIN suburbs s ON s.id = asub.suburb_id WHERE asub.agent_id = a.id AND s.slug = ?)");
+    params.push(filters.suburb);
   }
 
   if (filters.propertyType) {
-    const agentIdsForType = sqliteDb
-      .prepare(
-        "SELECT DISTINCT agent_id FROM sales WHERE property_type = ?"
-      )
-      .all(filters.propertyType) as { agent_id: number }[];
-    const ids = agentIdsForType.map((r) => r.agent_id);
-    if (ids.length > 0) {
-      conditions.push(inArray(agents.id, ids));
-    } else {
-      return { agents: [], total: 0 };
-    }
+    whereClauses.push("EXISTS (SELECT 1 FROM sales sa WHERE sa.agent_id = a.id AND sa.property_type = ?)");
+    params.push(filters.propertyType);
   }
 
-  const whereClause =
-    conditions.length > 0
-      ? conditions.length === 1
-        ? conditions[0]
-        : and(...conditions)
-      : undefined;
+  const whereClause = whereClauses.join(" AND ");
 
-  let orderByClause;
+  // Determine ORDER BY
+  let orderBy: string;
   switch (filters.sort) {
     case "rating":
-      orderByClause = [desc(agents.ratingsAverage)];
+      orderBy = "a.ratings_average DESC NULLS LAST";
       break;
     case "sales":
-      orderByClause = [desc(agents.totalSalesCount)];
+      orderBy = "a.total_sales_count DESC NULLS LAST";
       break;
     case "name":
-      orderByClause = [asc(agents.fullName)];
+      orderBy = "a.full_name ASC";
       break;
     case "quality":
-      orderByClause = [desc(agents.dataQualityScore)];
+      orderBy = "a.data_quality_score DESC NULLS LAST";
       break;
     default:
-      orderByClause = [desc(agents.ratingsAverage)];
+      orderBy = "a.ratings_average DESC NULLS LAST";
   }
 
-  const rows = db.query.agents
-    .findMany({
-      where: whereClause,
-      orderBy: orderByClause,
-      limit: pageSize,
-      offset,
-    })
-    .sync();
+  // Get paginated results
+  const rows = sqliteDb
+    .prepare(
+      `SELECT a.* FROM agents a WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+    )
+    .all(...params, pageSize, offset) as Agent[];
 
-  const totalResult = db
-    .select({ value: count() })
-    .from(agents)
-    .where(whereClause)
-    .get();
+  // Get total count
+  const countResult = sqliteDb
+    .prepare(`SELECT COUNT(*) as cnt FROM agents a WHERE ${whereClause}`)
+    .get(...params) as { cnt: number };
 
   return {
     agents: rows,
-    total: totalResult?.value ?? 0,
+    total: countResult?.cnt ?? 0,
   };
 }
 
@@ -205,46 +170,26 @@ export async function getAgentCount(filters?: {
   suburb?: string;
   state?: string;
 }): Promise<number> {
-  const conditions: ReturnType<typeof eq>[] = [];
+  const whereClauses: string[] = ["1=1"];
+  const params: (string | number)[] = [];
 
   if (filters?.state) {
-    conditions.push(eq(agents.licenseState, filters.state));
+    whereClauses.push("a.license_state = ?");
+    params.push(filters.state);
   }
 
   if (filters?.suburb) {
-    const sub = db.query.suburbs
-      .findFirst({
-        where: eq(suburbs.slug, filters.suburb),
-        columns: { id: true },
-      })
-      .sync();
-    if (sub) {
-      const agentIdsInSuburb = sqliteDb
-        .prepare("SELECT agent_id FROM agent_suburbs WHERE suburb_id = ?")
-        .all(sub.id) as { agent_id: number }[];
-      const ids = agentIdsInSuburb.map((r) => r.agent_id);
-      if (ids.length > 0) {
-        conditions.push(inArray(agents.id, ids));
-      } else {
-        return 0;
-      }
-    }
+    whereClauses.push("EXISTS (SELECT 1 FROM agent_suburbs asub JOIN suburbs s ON s.id = asub.suburb_id WHERE asub.agent_id = a.id AND s.slug = ?)");
+    params.push(filters.suburb);
   }
 
-  const whereClause =
-    conditions.length > 0
-      ? conditions.length === 1
-        ? conditions[0]
-        : and(...conditions)
-      : undefined;
+  const whereClause = whereClauses.join(" AND ");
 
-  const result = db
-    .select({ value: count() })
-    .from(agents)
-    .where(whereClause)
-    .get();
+  const result = sqliteDb
+    .prepare(`SELECT COUNT(*) as cnt FROM agents a WHERE ${whereClause}`)
+    .get(...params) as { cnt: number };
 
-  return result?.value ?? 0;
+  return result?.cnt ?? 0;
 }
 
 // ===========================================================================

@@ -15,7 +15,7 @@ import {
   getNearbySuburbs,
 } from "@/lib/db/queries";
 import { formatNumber, formatCurrency } from "@/lib/utils/format";
-import { breadcrumbJsonLd, suburbJsonLd } from "@/lib/seo/jsonld";
+import { breadcrumbJsonLd, suburbJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -152,11 +152,11 @@ export default async function SuburbPage({
     <main className="max-w-7xl mx-auto px-4 py-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbData) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(suburbData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(suburbData) }}
       />
       <Breadcrumb
         items={[

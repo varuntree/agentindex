@@ -157,6 +157,7 @@ export const agentSuburbs = sqliteTable(
       table.agentId,
       table.suburbId
     ),
+    index("agent_suburbs_suburb_id_idx").on(table.suburbId),
   ]
 );
 

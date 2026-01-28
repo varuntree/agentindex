@@ -1,5 +1,9 @@
 const BASE_URL = 'https://agentindex.com.au';
 
+export function safeJsonLd(data: object): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 export function agentJsonLd(agent: {
   fullName: string;
   photoUrl?: string | null;

@@ -4,10 +4,15 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3", "drizzle-orm"],
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
+      { protocol: "https", hostname: "*.ratemyagent.com.au" },
+      { protocol: "https", hostname: "*.domain.com.au" },
+      { protocol: "https", hostname: "*.realestate.com.au" },
+      { protocol: "https", hostname: "*.raywhite.com" },
+      { protocol: "https", hostname: "*.mcgrath.com.au" },
+      { protocol: "https", hostname: "*.belleproperty.com" },
+      { protocol: "https", hostname: "*.ljhooker.com.au" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "agentindex.com.au" },
     ],
   },
   async headers() {
@@ -16,7 +21,6 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         headers: [
           { key: "X-Robots-Tag", value: "noindex" },
-          { key: "Cache-Control", value: "public, max-age=60" },
         ],
       },
     ];

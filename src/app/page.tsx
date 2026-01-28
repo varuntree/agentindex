@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { getSiteStats, getTopSuburbs } from "@/lib/db/queries";
 import { formatNumber } from "@/lib/utils/format";
-import { homeJsonLd } from "@/lib/seo/jsonld";
+import { homeJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -86,7 +86,7 @@ export default async function HomePage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(homeData) }}
       />
       {/* ----------------------------------------------------------------- */}
       {/* Hero                                                              */}
@@ -125,15 +125,11 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {allSuburbs.map((suburb) => {
               const stateSlug = suburb.state.toLowerCase();
-              // Suburb slug is "name-state", strip trailing state for the URL segment
-              const nameParts = suburb.slug.split("-");
-              nameParts.pop(); // remove state suffix
-              const nameSlug = nameParts.join("-");
 
               return (
                 <Link
                   key={suburb.id}
-                  href={`/agents/${stateSlug}/${nameSlug}`}
+                  href={`/agents/${stateSlug}/${suburb.slug}`}
                 >
                   <Card className="h-full">
                     <CardContent>

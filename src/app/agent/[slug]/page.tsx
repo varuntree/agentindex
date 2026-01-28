@@ -65,12 +65,25 @@ export async function generateMetadata({
   const suburbName =
     agent.suburbs?.[0]?.suburb?.name ?? agent.licenseState ?? "Australia";
 
+  const stats = [
+    agent.totalSalesCount ? `${agent.totalSalesCount}:sales` : "",
+    agent.ratingsAverage ? `${agent.ratingsAverage.toFixed(1)}:rating` : "",
+  ]
+    .filter(Boolean)
+    .join("|");
+
+  const ogImageUrl = `${BASE_URL}/api/og?type=agent&name=${encodeURIComponent(agent.fullName)}&subtitle=${encodeURIComponent(agent.agency?.name || "")}&stats=${encodeURIComponent(stats)}`;
+
   return {
     title: `${agent.fullName} - Real Estate Agent in ${suburbName} | AgentIndex`,
     description: `View ${agent.fullName}'s sales history, reviews, and performance stats. ${agent.totalSalesCount ?? 0} properties sold.`,
     alternates: {
       canonical: `${BASE_URL}/agent/${slug}`,
     },
+    openGraph: {
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: agent.fullName }],
+    },
+    twitter: { card: "summary_large_image" },
   };
 }
 

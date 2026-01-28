@@ -50,12 +50,18 @@ export async function generateMetadata({
     return { title: "Not Found" };
   }
 
+  const ogImageUrl = `${BASE_URL}/api/og?type=suburb&name=${encodeURIComponent(suburb.name)}&subtitle=${encodeURIComponent(state.toUpperCase())}`;
+
   return {
     title: `Real Estate Agents in ${suburb.name}, ${state.toUpperCase()}`,
     alternates: {
       // Canonical always points to page 1 default sort (no query params)
       canonical: `${BASE_URL}/agents/${state}/${suburbSlug}`,
     },
+    openGraph: {
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `Real Estate Agents in ${suburb.name}` }],
+    },
+    twitter: { card: "summary_large_image" },
   };
 }
 

@@ -14,6 +14,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${BASE_URL}/agents`,
   },
+  openGraph: {
+    images: [
+      {
+        url: `${BASE_URL}/api/og?type=suburb&name=Australia&subtitle=Browse agents by state`,
+        width: 1200,
+        height: 630,
+        alt: "Real Estate Agents by State",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 const STATES: Record<string, string> = {

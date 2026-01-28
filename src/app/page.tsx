@@ -23,6 +23,19 @@ export const metadata: Metadata = {
   alternates: {
     canonical: BASE_URL,
   },
+  openGraph: {
+    images: [
+      {
+        url: `${BASE_URL}/api/og?type=home`,
+        width: 1200,
+        height: 630,
+        alt: "AgentIndex — Find Real Estate Agents in Australia",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export const revalidate = 3600;

@@ -21,6 +21,17 @@ export function generateMetadata(): Metadata {
       // Canonical always points to base page (no pagination/filter params)
       canonical: `${BASE_URL}/agencies`,
     },
+    openGraph: {
+      images: [
+        {
+          url: `${BASE_URL}/api/og?type=agency&name=Real Estate Agencies&subtitle=Browse agencies across Australia`,
+          width: 1200,
+          height: 630,
+          alt: "Real Estate Agencies in Australia",
+        },
+      ],
+    },
+    twitter: { card: "summary_large_image" },
   };
 }
 

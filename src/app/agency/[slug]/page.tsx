@@ -45,12 +45,25 @@ export async function generateMetadata({
     return { title: "Agency Not Found" };
   }
 
+  const stats = [
+    agency.totalAgents ? `${agency.totalAgents}:agents` : "",
+    agency.totalSalesCount ? `${formatNumber(agency.totalSalesCount)}:sales` : "",
+  ]
+    .filter(Boolean)
+    .join("|");
+
+  const ogImageUrl = `${BASE_URL}/api/og?type=agency&name=${encodeURIComponent(agency.name)}&subtitle=${encodeURIComponent(agency.suburb || "")}&stats=${encodeURIComponent(stats)}`;
+
   return {
     title: `${agency.name} - Real Estate Agency | AgentIndex`,
     description: `${agency.name} has ${agency.totalAgents ?? 0} agents and ${formatNumber(agency.totalSalesCount ?? 0)} total sales.`,
     alternates: {
       canonical: `${BASE_URL}/agency/${slug}`,
     },
+    openGraph: {
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: agency.name }],
+    },
+    twitter: { card: "summary_large_image" },
   };
 }
 

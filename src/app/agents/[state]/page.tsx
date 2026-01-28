@@ -40,12 +40,18 @@ export async function generateMetadata({
   const fullName = STATES[state];
   if (!fullName) return { title: "Not Found" };
 
+  const ogImageUrl = `${BASE_URL}/api/og?type=suburb&name=${encodeURIComponent(fullName)}&subtitle=Browse real estate agents`;
+
   return {
     title: `Real Estate Agents in ${fullName}`,
     alternates: {
       // Canonical always points to page 1 (no pagination params)
       canonical: `${BASE_URL}/agents/${state}`,
     },
+    openGraph: {
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `Real Estate Agents in ${fullName}` }],
+    },
+    twitter: { card: "summary_large_image" },
   };
 }
 

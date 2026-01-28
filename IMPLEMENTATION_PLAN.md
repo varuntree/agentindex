@@ -10,7 +10,7 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 |-------|--------|-------|
 | Phase 1: Next.js Setup | **Complete** | Next.js 15, React 19, Tailwind 4, TypeScript 5 |
 | Phase 2: Database Schema | **Complete** | 7 tables, FTS5, 17,503 suburbs seeded |
-| Phase 3: Data Pipeline | **NOT STARTED** | Empty `pipeline/` directory - critical blocker |
+| Phase 3: Data Pipeline | **In Progress** | Pipeline structure created, SDK installed |
 | Phase 3.5: Query Helpers | **Complete** | 20+ query functions |
 | Phase 4: API Routes | **Complete** | 8 API endpoints implemented |
 | Phase 5: UI Components | **Complete** | 19 components, all typed |
@@ -116,12 +116,16 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 
 ## Remaining Work (Priority Order)
 
-### Phase 3: Data Pipeline (NOT STARTED) — CRITICAL
+### Phase 3: Data Pipeline — IN PROGRESS
 
-**Status:** Directory structure exists but ALL files are empty/missing.
-**Blocker:** Without agent data, the MVP cannot demonstrate value.
+**Status:** Pipeline structure created, SDK installed.
 
-[...Phase 3 content unchanged...]
+**Implemented:**
+- `pipeline/schemas/index.ts` — Zod schemas: AgencyOutput, AgentOutput, SaleOutput, ReviewOutput
+- `pipeline/agents/index.ts` — Agent prompts for agency research, sales, reviews
+- `pipeline/scripts/pipeline.ts` — CLI with --location, --agencies, --discover-agencies options
+- `@anthropic-ai/claude-agent-sdk` v0.2.22 installed
+- Zod 4.3.6 installed
 
 ---
 
@@ -135,11 +139,11 @@ Last updated: 2026-01-28 — Phase 8.1 completed
 - [x] **8.1.2** — VoiceLayoutWrapper auto-detects pageType and slug from pathname
 - [x] **8.1.3** — Voice button verified visible on all pages (desktop and mobile)
 
-#### 8.2 Page-Specific Voice Context
-- [ ] **8.2.1** — Update `/agent/[slug]/page.tsx` to pass agent context to VoiceProvider
-- [ ] **8.2.2** — Update `/agency/[slug]/page.tsx` to pass agency context
-- [ ] **8.2.3** — Update `/agents/[state]/[suburb-slug]/page.tsx` to pass suburb context
-- [ ] **8.2.4** — Verify mode label changes ("Talk to Navigator" vs "Talk to [Agent Name]")
+#### 8.2 Page-Specific Voice Context ✓
+- [x] **8.2.1** — VoiceContextSetter component added to `/agent/[slug]/page.tsx`
+- [x] **8.2.2** — VoiceContextSetter component added to `/agency/[slug]/page.tsx`
+- [x] **8.2.3** — VoiceContextSetter added to `/agents/[state]/[suburb-slug]/page.tsx`
+- [x] **8.2.4** — VoicePanel shows personalized labels per page type
 
 #### 8.3 ElevenLabs Dashboard Setup (via Playwright MCP)
 **Automate with browser:** Use Playwright MCP tools to create agent and configure env vars.
@@ -207,6 +211,9 @@ mcp__playwright__browser_snapshot → copy agent ID
 - @elevenlabs/react clientTools type: `Record<string, (params) => Promise<string|number|void>|...>`
 - ElevenLabs signed URL: GET endpoint with agent_id query param, returns `signed_url` field
 - VoiceLayoutWrapper pattern: client wrapper using usePathname() to detect page context for layout-level voice integration
+- Pipeline directory must be excluded from tsconfig.json to avoid Next.js build conflicts
+- Claude Agent SDK query() returns AsyncGenerator, iterate with `for await`
+- SDK options: allowedTools, maxTurns, maxBudgetUsd (no direct 'model' param at top level)
 
 ---
 
@@ -214,9 +221,8 @@ mcp__playwright__browser_snapshot → copy agent ID
 
 1. **ElevenLabs agent** — Created in dashboard yet? Required for voice activation.
 2. **ElevenLabs LLM** — gpt-4o or claude-3-5-sonnet?
-3. **Claude Agent SDK** — Verify package name before Phase 3.
-4. **Image storage** — Use local `public/` or external CDN (S3, Cloudflare R2)?
-5. **Pipeline hosting** — Run locally, in CI, or as background job?
+3. **Image storage** — Use local `public/` or external CDN (S3, Cloudflare R2)?
+4. **Pipeline hosting** — Run locally, in CI, or as background job?
 
 ---
 
@@ -231,6 +237,7 @@ Last verified: 2026-01-28
 - [ ] Pipeline: Not implemented (Phase 3)
 - [x] Voice code: Complete (Phase 8.0)
 - [x] Voice active: Layout integration complete (Phase 8.1)
+- [x] tsconfig.json: pipeline and agent-ralph-ui excluded from build
 
 ---
 

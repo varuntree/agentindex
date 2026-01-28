@@ -142,13 +142,42 @@ Last updated: 2026-01-28 — Phase 8.0 completed
 - [ ] **8.2.3** — Update `/agents/[state]/[suburb-slug]/page.tsx` to pass suburb context
 - [ ] **8.2.4** — Verify mode label changes ("Talk to Navigator" vs "Talk to [Agent Name]")
 
-#### 8.3 ElevenLabs Dashboard Setup (External)
-- [ ] **8.3.1** — Create agent template in ElevenLabs dashboard
-- [ ] **8.3.2** — Configure voice settings (Australian accent, professional tone)
-- [ ] **8.3.3** — Enable "Allow overrides" in security settings
-- [ ] **8.3.4** — Register client tools: navigateToPage, searchAgents, filterResults, scrollToSection, activateAssistant, highlightAgent
-- [ ] **8.3.5** — Configure LLM (gpt-4o or claude-3-5-sonnet)
-- [ ] **8.3.6** — Add ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ID to .env.local
+#### 8.3 ElevenLabs Dashboard Setup (via Playwright MCP)
+**Automate with browser:** Use Playwright MCP tools to create agent and configure env vars.
+
+- [ ] **8.3.1** — Navigate to ElevenLabs dashboard (elevenlabs.io)
+- [ ] **8.3.2** — Create new Conversational AI agent:
+  - Name: "AgentIndex Voice Agent"
+  - LLM: claude-3-5-sonnet (or gpt-4o)
+  - Voice: Select Australian-accented, professional voice
+  - Default prompt: "You are a helpful assistant." (will be overridden)
+- [ ] **8.3.3** — Configure agent settings:
+  - Enable "Allow overrides" in Security tab
+  - Set turn timeout, interruption handling
+- [ ] **8.3.4** — Register client tools (7 total):
+  - navigateToPage (string: path)
+  - searchAgents (string: query)
+  - filterResults (string: sort, string: propertyType)
+  - scrollToSection (string: section)
+  - activateAssistant (string: slug)
+  - highlightAgent (string: agentSlug)
+- [ ] **8.3.5** — Copy Agent ID from dashboard
+- [ ] **8.3.6** — Get API key from Profile > API Keys
+- [ ] **8.3.7** — Write to `.env.local`:
+  ```
+  ELEVENLABS_API_KEY=xi_xxxxx
+  ELEVENLABS_AGENT_ID=agent_xxxxx
+  ```
+- [ ] **8.3.8** — Verify by calling /api/voice/signed-url (should return signedUrl, not error)
+
+**Playwright commands:**
+```
+mcp__playwright__browser_navigate → elevenlabs.io
+mcp__playwright__browser_snapshot → find login/dashboard
+mcp__playwright__browser_click → navigate to Conversational AI
+mcp__playwright__browser_fill_form → create agent
+mcp__playwright__browser_snapshot → copy agent ID
+```
 
 #### 8.4 Voice Context Improvements
 - [ ] **8.4.1** — Fix suburb context missing `topAgents` (currently returns empty array)

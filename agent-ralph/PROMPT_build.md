@@ -1,4 +1,4 @@
-0a. Study `spec/*` with up to 500 parallel Sonnet subagents to learn the application specifications.
+0a. Study `spec/*` with up to 25 parallel task Sonnet subagents to learn the application specifications.
 0b. Study `ai_docs/*` with Sonnet subagents to learn ElevenLabs voice agent and Claude Agent SDK integration patterns.
 0c. Study @IMPLEMENTATION_PLAN.md.
 0d. Study @AGENTS.md for build commands, validation steps, and codebase patterns.

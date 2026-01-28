@@ -2,13 +2,18 @@ import { useEffect, useRef } from "react";
 import { useRalphStore } from "../store/ralphStore";
 import type { WsEvent } from "../lib/types";
 
+const BASE_DELAY = 2000;
+const MAX_DELAY = 30000;
+
 export function useRalphSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const handleEvent = useRalphStore((s) => s.handleEvent);
+  const setConnected = useRalphStore((s) => s.setConnected);
 
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let alive = true;
+    let attempt = 0;
 
     function connect() {
       if (!alive) return;
@@ -19,6 +24,8 @@ export function useRalphSocket() {
 
       ws.onopen = () => {
         console.log("[ws] connected");
+        attempt = 0;
+        setConnected(true);
       };
 
       ws.onmessage = (ev) => {
@@ -31,10 +38,14 @@ export function useRalphSocket() {
       };
 
       ws.onclose = () => {
-        console.log("[ws] disconnected, reconnecting...");
+        console.log("[ws] disconnected");
         wsRef.current = null;
+        setConnected(false);
         if (alive) {
-          reconnectTimer = setTimeout(connect, 2000);
+          const delay = Math.min(BASE_DELAY * Math.pow(2, attempt), MAX_DELAY);
+          attempt++;
+          console.log(`[ws] reconnecting in ${delay}ms (attempt ${attempt})`);
+          reconnectTimer = setTimeout(connect, delay);
         }
       };
 
@@ -50,5 +61,5 @@ export function useRalphSocket() {
       clearTimeout(reconnectTimer);
       wsRef.current?.close();
     };
-  }, [handleEvent]);
+  }, [handleEvent, setConnected]);
 }

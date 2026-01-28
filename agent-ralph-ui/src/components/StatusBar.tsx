@@ -2,7 +2,7 @@ import { useRalphStore } from "../store/ralphStore";
 import { formatCost, formatDuration } from "../lib/format";
 
 export function StatusBar() {
-  const { mode, iteration, maxIterations, running, costUsd, durationMs, lastError } =
+  const { mode, iteration, maxIterations, running, costUsd, durationMs, lastError, connected } =
     useRalphStore();
 
   return (
@@ -35,8 +35,17 @@ export function StatusBar() {
         <span className="font-mono text-zinc-300">{formatDuration(durationMs)}</span>
       </div>
 
+      <div className="flex items-center gap-1.5 text-zinc-500">
+        <span
+          className={`inline-block h-1.5 w-1.5 rounded-full ${
+            connected ? "bg-emerald-500" : "bg-red-500"
+          }`}
+        />
+        <span className="text-[10px]">{connected ? "connected" : "disconnected"}</span>
+      </div>
+
       {lastError && (
-        <span className="ml-auto text-red-400 truncate max-w-md">{lastError}</span>
+        <span className="ml-auto max-w-md truncate text-red-400">{lastError}</span>
       )}
     </div>
   );

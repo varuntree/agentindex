@@ -7,6 +7,7 @@ export interface SubagentState {
   description: string;
   status: "running" | "done";
   messages: SdkMessagePayload[];
+  partialText: string;
   startedAt: number;
   completedAt?: number;
 }
@@ -19,6 +20,9 @@ interface RalphState {
   running: boolean;
   costUsd: number;
   durationMs: number;
+
+  // Connection
+  connected: boolean;
 
   // Main agent messages (current iteration)
   messages: SdkMessagePayload[];
@@ -37,16 +41,18 @@ interface RalphState {
   // Actions
   handleEvent: (event: WsEvent) => void;
   selectSubagent: (id: string | null) => void;
+  setConnected: (connected: boolean) => void;
   reset: () => void;
 }
 
-export const useRalphStore = create<RalphState>((set, get) => ({
+export const useRalphStore = create<RalphState>((set) => ({
   mode: "build",
   iteration: 0,
   maxIterations: 0,
   running: false,
   costUsd: 0,
   durationMs: 0,
+  connected: false,
   messages: [],
   partialText: "",
   subagents: new Map(),
@@ -78,7 +84,6 @@ export const useRalphStore = create<RalphState>((set, get) => ({
         break;
 
       case "iteration:start":
-        // Clear messages for fresh iteration
         set({
           iteration: event.iteration,
           messages: [],
@@ -105,13 +110,14 @@ export const useRalphStore = create<RalphState>((set, get) => ({
         // Partial text streaming
         if (msg.partialText !== undefined) {
           if (msg.parentToolUseId) {
-            // Subagent partial
             set((s) => {
               const subagents = new Map(s.subagents);
               const sa = subagents.get(msg.parentToolUseId!);
               if (sa) {
-                // Append partial text to last message or create placeholder
-                subagents.set(msg.parentToolUseId!, { ...sa });
+                subagents.set(msg.parentToolUseId!, {
+                  ...sa,
+                  partialText: sa.partialText + msg.partialText,
+                });
               }
               return { subagents };
             });
@@ -123,33 +129,40 @@ export const useRalphStore = create<RalphState>((set, get) => ({
 
         // Full message
         if (msg.parentToolUseId) {
-          // Subagent message
           set((s) => {
             const subagents = new Map(s.subagents);
             const sa = subagents.get(msg.parentToolUseId!);
             if (sa) {
+              // Client-side fallback: mark done on result message
+              const isDone = msg.messageType === "result";
               subagents.set(msg.parentToolUseId!, {
                 ...sa,
                 messages: [...sa.messages, msg],
+                partialText: "",
+                ...(isDone && sa.status === "running"
+                  ? { status: "done" as const, completedAt: Date.now() }
+                  : {}),
               });
             } else {
-              // Unknown subagent — register it
+              // Message arrived before subagent:start — create placeholder
+              const isDone = msg.messageType === "result";
               subagents.set(msg.parentToolUseId!, {
                 id: msg.parentToolUseId!,
                 type: "unknown",
                 description: "",
-                status: "running",
+                status: isDone ? "done" : "running",
                 messages: [msg],
+                partialText: "",
                 startedAt: Date.now(),
+                ...(isDone ? { completedAt: Date.now() } : {}),
               });
             }
             return { subagents };
           });
         } else {
-          // Main agent message
           set((s) => ({
             messages: [...s.messages, msg],
-            partialText: "", // Reset partial on full message
+            partialText: "",
           }));
         }
         break;
@@ -158,14 +171,25 @@ export const useRalphStore = create<RalphState>((set, get) => ({
       case "subagent:start":
         set((s) => {
           const subagents = new Map(s.subagents);
-          subagents.set(event.agentId, {
-            id: event.agentId,
-            type: event.agentType,
-            description: event.description,
-            status: "running",
-            messages: [],
-            startedAt: Date.now(),
-          });
+          const existing = subagents.get(event.agentId);
+          if (existing) {
+            // Merge metadata into existing placeholder (keep messages)
+            subagents.set(event.agentId, {
+              ...existing,
+              type: event.agentType,
+              description: event.description,
+            });
+          } else {
+            subagents.set(event.agentId, {
+              id: event.agentId,
+              type: event.agentType,
+              description: event.description,
+              status: "running",
+              messages: [],
+              partialText: "",
+              startedAt: Date.now(),
+            });
+          }
           return { subagents };
         });
         break;
@@ -174,7 +198,7 @@ export const useRalphStore = create<RalphState>((set, get) => ({
         set((s) => {
           const subagents = new Map(s.subagents);
           const sa = subagents.get(event.agentId);
-          if (sa) {
+          if (sa && sa.status !== "done") {
             subagents.set(event.agentId, {
               ...sa,
               status: "done",
@@ -203,6 +227,7 @@ export const useRalphStore = create<RalphState>((set, get) => ({
   },
 
   selectSubagent: (id) => set({ activeSubagentId: id }),
+  setConnected: (connected) => set({ connected }),
 
   reset: () =>
     set({
@@ -212,6 +237,7 @@ export const useRalphStore = create<RalphState>((set, get) => ({
       running: false,
       costUsd: 0,
       durationMs: 0,
+      connected: false,
       messages: [],
       partialText: "",
       subagents: new Map(),

@@ -198,8 +198,13 @@ export async function startLoop(mode: "plan" | "build", maxIterations: number) {
 
         emit({ type: "sdk:message", message: payload });
 
-        // Iteration complete
-        if (payload.messageType === "result") {
+        // Detect subagent completion — result with parentToolUseId
+        if (payload.messageType === "result" && payload.parentToolUseId) {
+          emit({ type: "subagent:stop", agentId: payload.parentToolUseId });
+        }
+
+        // Iteration complete (top-level result, no parent)
+        if (payload.messageType === "result" && !payload.parentToolUseId) {
           const cost = payload.costUsd || 0;
           const duration = payload.durationMs || 0;
           state.totalCostUsd += cost;

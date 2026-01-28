@@ -16,7 +16,8 @@ import {
 } from "@/lib/db/queries";
 import { formatNumber, formatCurrency } from "@/lib/utils/format";
 import { breadcrumbJsonLd, suburbJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
-import { VoiceContextSetter } from "@/components/voice";
+import { suburbMetadata } from "@/lib/seo/metadata";
+import { VoiceContextSetterWrapper } from "@/components/voice/VoiceContextSetterWrapper";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -51,15 +52,21 @@ export async function generateMetadata({
     return { title: "Not Found" };
   }
 
+  // Use suburbMetadata helper for consistent title/description
+  const baseMeta = suburbMetadata({
+    name: suburb.name,
+    state: state,
+    slug: suburb.slug,
+    postcode: suburb.postcode ?? undefined,
+    totalAgents: suburb.totalAgents ?? undefined,
+  });
+
   const ogImageUrl = `${BASE_URL}/api/og?type=suburb&name=${encodeURIComponent(suburb.name)}&subtitle=${encodeURIComponent(state.toUpperCase())}`;
 
   return {
-    title: `Real Estate Agents in ${suburb.name}, ${state.toUpperCase()}`,
-    alternates: {
-      // Canonical always points to page 1 default sort (no query params)
-      canonical: `${BASE_URL}/agents/${state}/${suburbSlug}`,
-    },
+    ...baseMeta,
     openGraph: {
+      ...baseMeta.openGraph,
       images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `Real Estate Agents in ${suburb.name}` }],
     },
     twitter: { card: "summary_large_image" },
@@ -147,8 +154,13 @@ export default async function SuburbPage({
   ]);
 
   const suburbData = suburbJsonLd(
-    { name: suburb.name, state: state.toUpperCase() },
-    agents.map((a) => a.fullName)
+    { name: suburb.name, state: state.toUpperCase(), slug: suburb.slug },
+    agents.map((a) => ({
+      fullName: a.fullName,
+      slug: a.slug,
+      ratingsAverage: a.ratingsAverage,
+      ratingsCount: a.ratingsCount ?? undefined,
+    }))
   );
 
   return (
@@ -163,7 +175,7 @@ export default async function SuburbPage({
       />
 
       {/* Set voice context for personalized button label */}
-      <VoiceContextSetter name={suburb.name} />
+      <VoiceContextSetterWrapper name={suburb.name} />
 
       <Breadcrumb
         items={[
@@ -260,8 +272,10 @@ export default async function SuburbPage({
                 lastName: agent.lastName,
                 photoUrl: agent.photoUrl,
                 rating: agent.ratingsAverage ?? undefined,
+                ratingsCount: agent.ratingsCount ?? undefined,
                 totalSalesCount: agent.totalSalesCount ?? undefined,
                 totalSalesVolume: agent.totalSalesVolume ?? undefined,
+                suburbs: [{ name: suburb.name, slug: suburb.slug, state: state.toUpperCase() }],
               }}
             />
           ))}

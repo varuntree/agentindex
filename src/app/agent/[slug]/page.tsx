@@ -37,8 +37,9 @@ import {
   formatDate,
   formatPercentage,
 } from "@/lib/utils/format";
-import { breadcrumbJsonLd, agentJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
-import { VoiceContextSetter } from "@/components/voice";
+import { agentBreadcrumbJsonLd, agentJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
+import { agentMetadata } from "@/lib/seo/metadata";
+import { VoiceContextSetterWrapper } from "@/components/voice/VoiceContextSetterWrapper";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -66,6 +67,16 @@ export async function generateMetadata({
   const suburbName =
     agent.suburbs?.[0]?.suburb?.name ?? agent.licenseState ?? "Australia";
 
+  // Use agentMetadata helper for consistent title/description
+  const baseMeta = agentMetadata({
+    fullName: agent.fullName,
+    slug: agent.slug,
+    suburb: suburbName,
+    ratingsAverage: agent.ratingsAverage,
+    totalSalesCount: agent.totalSalesCount ?? undefined,
+    agencyName: agent.agency?.name,
+  });
+
   const stats = [
     agent.totalSalesCount ? `${agent.totalSalesCount}:sales` : "",
     agent.ratingsAverage ? `${agent.ratingsAverage.toFixed(1)}:rating` : "",
@@ -76,12 +87,9 @@ export async function generateMetadata({
   const ogImageUrl = `${BASE_URL}/api/og?type=agent&name=${encodeURIComponent(agent.fullName)}&subtitle=${encodeURIComponent(agent.agency?.name || "")}&stats=${encodeURIComponent(stats)}`;
 
   return {
-    title: `${agent.fullName} - Real Estate Agent in ${suburbName} | AgentIndex`,
-    description: `View ${agent.fullName}'s sales history, reviews, and performance stats. ${agent.totalSalesCount ?? 0} properties sold.`,
-    alternates: {
-      canonical: `${BASE_URL}/agent/${slug}`,
-    },
+    ...baseMeta,
     openGraph: {
+      ...baseMeta.openGraph,
       images: [{ url: ogImageUrl, width: 1200, height: 630, alt: agent.fullName }],
     },
     twitter: { card: "summary_large_image" },
@@ -124,20 +132,28 @@ export default async function AgentProfilePage({
     }
   })();
 
-  const breadcrumbData = breadcrumbJsonLd([
-    { name: "Home", url: BASE_URL },
-    { name: "Agents", url: `${BASE_URL}/agents` },
-    { name: agent.fullName, url: `${BASE_URL}/agent/${slug}` },
-  ]);
+  const breadcrumbData = agentBreadcrumbJsonLd({
+    fullName: agent.fullName,
+    slug: agent.slug,
+    agency: agent.agency ? { name: agent.agency.name, slug: agent.agency.slug } : null,
+  });
 
   const agentData = agentJsonLd({
+    slug: agent.slug,
     fullName: agent.fullName,
     photoUrl: agent.photoUrl,
     phone: agent.phone,
     email: agent.email,
-    agency: agent.agency,
+    agency: agent.agency ? { name: agent.agency.name, slug: agent.agency.slug } : null,
     ratingsAverage: agent.ratingsAverage,
     ratingsCount: agent.ratingsCount ?? undefined,
+    suburbsServiced: agent.suburbsServiced,
+    reviews: agent.reviews?.map(r => ({
+      reviewerName: r.reviewerName,
+      overallRating: r.overallRating,
+      reviewText: r.reviewText,
+      reviewDate: r.reviewDate,
+    })),
   });
 
   return (
@@ -152,7 +168,7 @@ export default async function AgentProfilePage({
       />
 
       {/* Set voice context for personalized button label */}
-      <VoiceContextSetter name={agent.fullName} />
+      <VoiceContextSetterWrapper name={agent.fullName} />
 
       <Breadcrumb
         items={[
@@ -444,22 +460,28 @@ export default async function AgentProfilePage({
             Similar Agents
           </h2>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x">
-            {similarAgents.map((sa) => (
-              <div key={sa.slug} className="min-w-[280px] snap-start shrink-0">
-                <AgentCard
-                  agent={{
-                    name: sa.fullName,
-                    slug: sa.slug,
-                    firstName: sa.firstName,
-                    lastName: sa.lastName,
-                    photoUrl: sa.photoUrl,
-                    rating: sa.ratingsAverage ?? undefined,
-                    totalSalesCount: sa.totalSalesCount ?? undefined,
-                    totalSalesVolume: sa.totalSalesVolume ?? undefined,
-                  }}
-                />
-              </div>
-            ))}
+            {similarAgents.map((sa) => {
+              // Use current agent's primary suburb for location context
+              const primarySuburb = agent.suburbs?.[0]?.suburb;
+              return (
+                <div key={sa.slug} className="min-w-[280px] snap-start shrink-0">
+                  <AgentCard
+                    agent={{
+                      name: sa.fullName,
+                      slug: sa.slug,
+                      firstName: sa.firstName,
+                      lastName: sa.lastName,
+                      photoUrl: sa.photoUrl,
+                      rating: sa.ratingsAverage ?? undefined,
+                      ratingsCount: sa.ratingsCount ?? undefined,
+                      totalSalesCount: sa.totalSalesCount ?? undefined,
+                      totalSalesVolume: sa.totalSalesVolume ?? undefined,
+                      suburbs: primarySuburb ? [{ name: primarySuburb.name, slug: primarySuburb.slug, state: primarySuburb.state }] : undefined,
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

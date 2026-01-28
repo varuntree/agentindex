@@ -20,8 +20,9 @@ import {
   formatNumber,
   formatDate,
 } from "@/lib/utils/format";
-import { breadcrumbJsonLd, agencyJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
-import { VoiceContextSetter } from "@/components/voice";
+import { agencyBreadcrumbJsonLd, agencyJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
+import { agencyMetadata } from "@/lib/seo/metadata";
+import { VoiceContextSetterWrapper } from "@/components/voice/VoiceContextSetterWrapper";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -46,6 +47,14 @@ export async function generateMetadata({
     return { title: "Agency Not Found" };
   }
 
+  // Use agencyMetadata helper for consistent title/description
+  const baseMeta = agencyMetadata({
+    name: agency.name,
+    slug: agency.slug,
+    suburb: agency.suburb ?? undefined,
+    totalAgents: agency.totalAgents ?? undefined,
+  });
+
   const stats = [
     agency.totalAgents ? `${agency.totalAgents}:agents` : "",
     agency.totalSalesCount ? `${formatNumber(agency.totalSalesCount)}:sales` : "",
@@ -56,12 +65,9 @@ export async function generateMetadata({
   const ogImageUrl = `${BASE_URL}/api/og?type=agency&name=${encodeURIComponent(agency.name)}&subtitle=${encodeURIComponent(agency.suburb || "")}&stats=${encodeURIComponent(stats)}`;
 
   return {
-    title: `${agency.name} - Real Estate Agency | AgentIndex`,
-    description: `${agency.name} has ${agency.totalAgents ?? 0} agents and ${formatNumber(agency.totalSalesCount ?? 0)} total sales.`,
-    alternates: {
-      canonical: `${BASE_URL}/agency/${slug}`,
-    },
+    ...baseMeta,
     openGraph: {
+      ...baseMeta.openGraph,
       images: [{ url: ogImageUrl, width: 1200, height: 630, alt: agency.name }],
     },
     twitter: { card: "summary_large_image" },
@@ -100,13 +106,26 @@ export default async function AgencyProfilePage({ params }: PageProps) {
   ].filter(Boolean);
   const fullAddress = addressParts.join(", ");
 
-  const breadcrumbData = breadcrumbJsonLd([
-    { name: "Home", url: BASE_URL },
-    { name: "Agencies", url: `${BASE_URL}/agencies` },
-    { name: agency.name, url: `${BASE_URL}/agency/${slug}` },
-  ]);
+  const breadcrumbData = agencyBreadcrumbJsonLd({
+    name: agency.name,
+    slug: agency.slug,
+    state: agency.state,
+  });
+
+  // Collect unique suburbs from agents for areaServed
+  const suburbsServed = [...new Set(
+    agentsList.flatMap(a => {
+      try {
+        const suburbs = a.suburbsServiced ? JSON.parse(a.suburbsServiced) : [];
+        return Array.isArray(suburbs) ? suburbs : [];
+      } catch {
+        return [];
+      }
+    })
+  )].slice(0, 20);
 
   const agencyData = agencyJsonLd({
+    slug: agency.slug,
     name: agency.name,
     phone: agency.phone,
     email: agency.email,
@@ -116,6 +135,8 @@ export default async function AgencyProfilePage({ params }: PageProps) {
     state: agency.state,
     postcode: agency.postcode,
     totalAgents: agency.totalAgents ?? 0,
+    agents: agentsList.map(a => ({ fullName: a.fullName, slug: a.slug })),
+    suburbsServed,
   });
 
   return (
@@ -130,7 +151,7 @@ export default async function AgencyProfilePage({ params }: PageProps) {
       />
 
       {/* Set voice context for personalized button label */}
-      <VoiceContextSetter name={agency.name} />
+      <VoiceContextSetterWrapper name={agency.name} />
 
       <Breadcrumb
         items={[
@@ -225,8 +246,10 @@ export default async function AgencyProfilePage({ params }: PageProps) {
                   agencySlug: agency.slug,
                   photoUrl: agent.photoUrl,
                   rating: agent.ratingsAverage ?? undefined,
+                  ratingsCount: agent.ratingsCount ?? undefined,
                   totalSalesCount: agent.totalSalesCount ?? undefined,
                   totalSalesVolume: agent.totalSalesVolume ?? undefined,
+                  suburbs: agency.state ? [{ name: agency.suburb ?? "", slug: "", state: agency.state.toUpperCase() }] : undefined,
                 }}
               />
             ))}

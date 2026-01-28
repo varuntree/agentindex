@@ -17,7 +17,7 @@ Last updated: 2026-01-29 — Comprehensive audit complete via 25 parallel agents
 | Phase 4: API Routes | **~90%** | Endpoints work, response shape + field deviations |
 | Phase 5: UI Components | **~70%** | 19 components, border/font/layout spec gaps |
 | Phase 6: Pages | **~70%** | All pages exist, section gaps (suburb page improved) |
-| Phase 7: SEO | **~65%** | Core SEO done, sitemap split + JSON-LD + titles need work |
+| Phase 7: SEO | **Complete** | Sitemap split, JSON-LD enhanced, metadata titles updated |
 | Phase 8: Voice Integration | **~95%** | Working, minor CSS + tracking polish |
 | Phase 9: Testing & QA | **NOT STARTED** | No test framework |
 
@@ -26,6 +26,16 @@ Last updated: 2026-01-29 — Comprehensive audit complete via 25 parallel agents
 ## CRITICAL BLOCKERS
 
 None. All blocking items resolved.
+
+---
+
+## MVP Scope Notes
+
+**Skipping for MVP** (data optimization later):
+- Demographics data sourcing (ABS) — fields exist, show "N/A" or hide
+- Market stats sourcing (YoY, clearance rate, rental yield) — use placeholder/sample values
+- market_share_suburb calculation — skip display
+- Image downloading — use direct URLs (already implemented)
 
 ---
 
@@ -125,7 +135,7 @@ None. All blocking items resolved.
 - [ ] **5.10** — GlobalFooter: Add About section with tagline + description (50 words)
 - [ ] **5.11** — GlobalFooter: Add Contact link to legal section
 - [ ] **5.4** — GlobalFooter: Make suburb links dynamic from DB (currently hardcoded)
-- [ ] **5.13** — GlobalNav: Add "Suburbs" and "About" nav links per spec (currently only Agents/Agencies)
+- [x] **5.13** — ~~GlobalNav: Add Suburbs/About links~~ → Keep current nav (decision made)
 
 **Playwright verify:** Screenshot nav, verify voice button + all links. Screenshot footer, verify About section.
 
@@ -152,36 +162,36 @@ None. All blocking items resolved.
 
 ---
 
-## HIGH PRIORITY — SEO (Phase 7)
+## ~~HIGH PRIORITY — SEO (Phase 7)~~ **COMPLETE**
 
 ### Sitemap
 
-- [ ] **7.1** — Split sitemap into index + 4 files: agents, suburbs, agencies, pages
-- [ ] **7.2** — Fix changefreq: suburbs weekly, agents/agencies monthly, static yearly
-- [ ] **7.10** — Fix priorities: static pages 0.5 (not 1.0), agencies 0.7/monthly
+- [x] **7.1** — Split sitemap into index + 4 files: agents, suburbs, agencies, pages
+- [x] **7.2** — Fix changefreq: suburbs weekly, agents/agencies monthly, static yearly
+- [x] **7.10** — Fix priorities: static pages 0.5 (not 1.0), agencies 0.7/monthly
 
 ### JSON-LD Schemas
 
-- [ ] **7.3** — Agent: Add `url`, `jobTitle: "Real Estate Agent"`, `worksFor.url`, `review` array
-- [ ] **7.4** — Agent: Change `areaServed` from `Place` to `City` type
-- [ ] **7.5** — Agent: Fix `reviewCount` vs `ratingCount` inconsistency
-- [ ] **7.6** — Agency: Add `aggregateRating`, `employee` array, full `areaServed` list
-- [ ] **7.7** — Suburb ItemList: Add agent `aggregateRating` + `url` to each ListItem
-- [ ] **7.11** — Add BreadcrumbList schema to agent/agency pages (currently only suburbs)
+- [x] **7.3** — Agent: Add `url`, `jobTitle: "Real Estate Agent"`, `worksFor.url`, `review` array
+- [x] **7.4** — Agent: Change `areaServed` from `Place` to `City` type
+- [x] **7.5** — Agent: Fix `reviewCount` vs `ratingCount` inconsistency
+- [x] **7.6** — Agency: Add `aggregateRating`, `employee` array, full `areaServed` list
+- [x] **7.7** — Suburb ItemList: Add agent `aggregateRating` + `url` to each ListItem
+- [x] **7.11** — Add BreadcrumbList schema to agent/agency pages (uses new helpers)
 
 ### Metadata
 
-- [ ] **7.8** — Suburb title: Add "Best", year (2026), postcode per spec (`Best Real Estate Agents in [Suburb], [State] [Postcode] — 2026 | AgentIndex`)
-- [ ] **7.9** — Homepage SearchAction: Fix URL (`/search?q=` not `/agents?q=`)
-- [ ] **7.12** — Agent title: Add agency name, fix separator (`[Name] — Real Estate Agent | [Agency] | AgentIndex`)
-- [ ] **7.13** — Agency title: Fix format (`[Agency] — Agents, Reviews & Sales | AgentIndex`)
-- [ ] **7.14** — State title: Add year (2026)
+- [x] **7.8** — Suburb title: Add "Best", year (2026), postcode per spec
+- [x] **7.9** — Homepage SearchAction: Fix URL (`/search?q=` not `/agents?q=`)
+- [x] **7.12** — Agent title: Add agency name, fix separator
+- [x] **7.13** — Agency title: Fix format
+- [x] **7.14** — State title: Add year (2026)
 
 ---
 
 ## MEDIUM PRIORITY — Pipeline (Phase 3)
 
-- [ ] **3.1** — Add image download system (agent photos, agency logos, property images to `/public/images/`)
+- [x] **3.1** — ~~Image download system~~ → Using direct URLs (decision made)
 - [ ] **3.4** — Add config file support (`pipeline-config.json` with locations[], enrichment{}, rate_limits{}, quality{})
 - [ ] **3.3** — Add CLI utility commands: `pnpm pipeline:validate`, `pnpm pipeline:report`, `pnpm pipeline:retry`, `pnpm pipeline:dedupe`
 - [ ] **3.2** — Add license verification integration (NSW Fair Trading)
@@ -292,11 +302,21 @@ None. All blocking items resolved.
 - [x] Loading skeletons for all dynamic pages
 - [x] Global error boundary
 
-### Phase 7: SEO (Core)
-- [x] sitemap.ts — Dynamic generation from database
+### Phase 7: SEO (Complete)
+- [x] sitemap.ts — Split into index + 4 sub-sitemaps (static, agents, suburbs, agencies)
+- [x] Sitemap priorities: suburbs 0.9, agents 0.8, agencies 0.7, static 0.5
+- [x] Sitemap changefreq: suburbs weekly, agents/agencies monthly, static yearly
 - [x] robots.ts — Allow crawlers, block /api/*
-- [x] JSON-LD: RealEstateAgent, BreadcrumbList, WebSite, ItemList schemas
-- [x] Metadata helpers for all page types
+- [x] JSON-LD: RealEstateAgent with url, jobTitle, worksFor.url, review array, City areaServed
+- [x] JSON-LD: Agency with aggregateRating, employee array, areaServed list
+- [x] JSON-LD: Suburb ItemList with agent aggregateRating + url
+- [x] JSON-LD: BreadcrumbList on agent/agency/suburb pages (new helpers)
+- [x] JSON-LD: Homepage SearchAction URL fixed (/search?q=)
+- [x] Metadata helpers: agentMetadata, suburbMetadata, agencyMetadata, stateMetadata
+- [x] Metadata titles: Agent "[Name] — Real Estate Agent | [Agency] | AgentIndex"
+- [x] Metadata titles: Suburb "Best Real Estate Agents in [Suburb], [State] [Postcode] — 2026 | AgentIndex"
+- [x] Metadata titles: Agency "[Agency] — Agents, Reviews & Sales | AgentIndex"
+- [x] Metadata titles: State "Real Estate Agents in [State] — 2026 | AgentIndex"
 - [x] OG image generation via @vercel/og
 - [x] Canonical tags on all pages
 - [x] metadataBase configured

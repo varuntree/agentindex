@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 const BASE_URL = 'https://agentindex.com.au';
+const CURRENT_YEAR = 2026;
 
 type AgentMeta = {
   fullName: string;
@@ -8,12 +9,14 @@ type AgentMeta = {
   suburb?: string;
   ratingsAverage?: number | null;
   totalSalesCount?: number;
+  agencyName?: string;
 };
 
 type SuburbMeta = {
   name: string;
   state: string;
   slug: string;
+  postcode?: string;
   totalAgents?: number;
 };
 
@@ -30,8 +33,11 @@ type StateMeta = {
 };
 
 export function agentMetadata(agent: AgentMeta): Metadata {
+  // Format: [Name] — Real Estate Agent | [Agency] | AgentIndex
+  const agencyPart = agent.agencyName ? ` | ${agent.agencyName}` : '';
+  const title = `${agent.fullName} — Real Estate Agent${agencyPart} | AgentIndex`;
+
   const location = agent.suburb ? ` in ${agent.suburb}` : '';
-  const title = `${agent.fullName} - Real Estate Agent${location}`;
   const salesPart = agent.totalSalesCount
     ? ` with ${agent.totalSalesCount} sales`
     : '';
@@ -39,7 +45,7 @@ export function agentMetadata(agent: AgentMeta): Metadata {
     agent.ratingsAverage != null
       ? ` Rated ${agent.ratingsAverage.toFixed(1)}/5.`
       : '';
-  const description = `${agent.fullName} is a real estate agent${salesPart}.${ratingPart} Compare performance and reviews on AgentIndex.`;
+  const description = `${agent.fullName} is a real estate agent${location}${salesPart}.${ratingPart} Compare performance and reviews on AgentIndex.`;
 
   return {
     title,
@@ -71,7 +77,10 @@ export function agentMetadata(agent: AgentMeta): Metadata {
 
 export function suburbMetadata(suburb: SuburbMeta): Metadata {
   const stateUpper = suburb.state.toUpperCase();
-  const title = `Real Estate Agents in ${suburb.name}, ${stateUpper}`;
+  const postcodePart = suburb.postcode ? ` ${suburb.postcode}` : '';
+  // Format: Best Real Estate Agents in [Suburb], [State] [Postcode] — 2026 | AgentIndex
+  const title = `Best Real Estate Agents in ${suburb.name}, ${stateUpper}${postcodePart} — ${CURRENT_YEAR} | AgentIndex`;
+
   const agentsPart = suburb.totalAgents
     ? `${suburb.totalAgents} real estate agents`
     : 'real estate agents';
@@ -98,7 +107,9 @@ export function suburbMetadata(suburb: SuburbMeta): Metadata {
 }
 
 export function agencyMetadata(agency: AgencyMeta): Metadata {
-  const title = `${agency.name} - Real Estate Agency`;
+  // Format: [Agency] — Agents, Reviews & Sales | AgentIndex
+  const title = `${agency.name} — Agents, Reviews & Sales | AgentIndex`;
+
   const agentsPart = agency.totalAgents
     ? `has ${agency.totalAgents} agents`
     : 'is a real estate agency';
@@ -126,7 +137,8 @@ export function agencyMetadata(agency: AgencyMeta): Metadata {
 }
 
 export function stateMetadata(state: StateMeta): Metadata {
-  const title = `Real Estate Agents in ${state.name}`;
+  // Format: Real Estate Agents in [State] — 2026 | AgentIndex
+  const title = `Real Estate Agents in ${state.name} — ${CURRENT_YEAR} | AgentIndex`;
   const description = `Browse and compare real estate agents across ${state.name} (${state.abbrev}). View sales history, ratings, and verified credentials on AgentIndex.`;
 
   return {
@@ -152,13 +164,13 @@ export function stateMetadata(state: StateMeta): Metadata {
 export function homeMetadata(): Metadata {
   return {
     title: {
-      default: 'AgentIndex \u2014 Find Real Estate Agents in Australia',
+      default: 'AgentIndex — Find Real Estate Agents in Australia',
       template: '%s | AgentIndex',
     },
     description:
       "Australia's most comprehensive real estate agent directory. Compare agents by sales history, reviews, and verified credentials.",
     openGraph: {
-      title: 'AgentIndex \u2014 Find Real Estate Agents in Australia',
+      title: 'AgentIndex — Find Real Estate Agents in Australia',
       description:
         "Australia's most comprehensive real estate agent directory. Compare agents by sales history, reviews, and verified credentials.",
       url: BASE_URL,
@@ -168,7 +180,7 @@ export function homeMetadata(): Metadata {
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'AgentIndex \u2014 Find Real Estate Agents in Australia',
+      title: 'AgentIndex — Find Real Estate Agents in Australia',
       description:
         "Australia's most comprehensive real estate agent directory.",
     },

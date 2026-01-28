@@ -5,33 +5,69 @@ import { gt } from 'drizzle-orm';
 
 const BASE_URL = 'https://agentindex.com.au';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const entries: MetadataRoute.Sitemap = [];
+// Sitemap IDs: 0=static, 1=agents, 2=suburbs, 3=agencies
+const SITEMAP_STATIC = 0;
+const SITEMAP_AGENTS = 1;
+const SITEMAP_SUBURBS = 2;
+const SITEMAP_AGENCIES = 3;
 
-  // Static pages
-  entries.push(
-    {
-      url: BASE_URL,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 1.0,
-    },
-    {
-      url: `${BASE_URL}/agents`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/agencies`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    }
-  );
+export async function generateSitemaps() {
+  return [
+    { id: SITEMAP_STATIC },
+    { id: SITEMAP_AGENTS },
+    { id: SITEMAP_SUBURBS },
+    { id: SITEMAP_AGENCIES },
+  ];
+}
+
+export default async function sitemap({
+  id,
+}: {
+  id: number;
+}): Promise<MetadataRoute.Sitemap> {
+  switch (id) {
+    case SITEMAP_STATIC:
+      return generateStaticSitemap();
+    case SITEMAP_AGENTS:
+      return generateAgentsSitemap();
+    case SITEMAP_SUBURBS:
+      return generateSuburbsSitemap();
+    case SITEMAP_AGENCIES:
+      return generateAgenciesSitemap();
+    default:
+      return [];
+  }
+}
+
+function generateStaticSitemap(): MetadataRoute.Sitemap {
+  const entries: MetadataRoute.Sitemap = [];
+  const states = ['nsw', 'vic', 'qld', 'wa', 'sa', 'tas', 'act', 'nt'];
+
+  // Homepage
+  entries.push({
+    url: BASE_URL,
+    lastModified: new Date(),
+    changeFrequency: 'yearly',
+    priority: 0.5,
+  });
+
+  // Agents hub
+  entries.push({
+    url: `${BASE_URL}/agents`,
+    lastModified: new Date(),
+    changeFrequency: 'yearly',
+    priority: 0.5,
+  });
+
+  // Agencies hub
+  entries.push({
+    url: `${BASE_URL}/agencies`,
+    lastModified: new Date(),
+    changeFrequency: 'yearly',
+    priority: 0.5,
+  });
 
   // State pages
-  const states = ['nsw', 'vic', 'qld', 'wa', 'sa', 'tas', 'act', 'nt'];
   for (const state of states) {
     entries.push({
       url: `${BASE_URL}/agents/${state}`,
@@ -41,7 +77,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-  // Agent pages
+  return entries;
+}
+
+function generateAgentsSitemap(): MetadataRoute.Sitemap {
+  const entries: MetadataRoute.Sitemap = [];
+
   try {
     const allAgents = db
       .select({ slug: agents.slug, updatedAt: agents.updatedAt })
@@ -52,7 +93,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       entries.push({
         url: `${BASE_URL}/agent/${agent.slug}`,
         lastModified: agent.updatedAt ?? new Date(),
-        changeFrequency: 'weekly',
+        changeFrequency: 'monthly',
         priority: 0.8,
       });
     }
@@ -60,7 +101,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // DB may be empty or unavailable
   }
 
-  // Suburb pages (only suburbs with agents)
+  return entries;
+}
+
+function generateSuburbsSitemap(): MetadataRoute.Sitemap {
+  const entries: MetadataRoute.Sitemap = [];
+
   try {
     const allSuburbs = db
       .select({
@@ -84,7 +130,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // DB may be empty or unavailable
   }
 
-  // Agency pages
+  return entries;
+}
+
+function generateAgenciesSitemap(): MetadataRoute.Sitemap {
+  const entries: MetadataRoute.Sitemap = [];
+
   try {
     const allAgencies = db
       .select({ slug: agencies.slug, updatedAt: agencies.updatedAt })
@@ -95,7 +146,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       entries.push({
         url: `${BASE_URL}/agency/${agency.slug}`,
         lastModified: agency.updatedAt ?? new Date(),
-        changeFrequency: 'weekly',
+        changeFrequency: 'monthly',
         priority: 0.7,
       });
     }

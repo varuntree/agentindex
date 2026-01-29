@@ -16,12 +16,18 @@ import {
   Car,
   Home,
   Gavel,
+  Linkedin,
+  Facebook,
+  Instagram,
+  Globe,
 } from "lucide-react";
 import { AgentPhoto } from "@/components/agent/agent-photo";
 import { AgentCard } from "@/components/agent/agent-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
+import { DonutChart } from "@/components/ui/donut-chart";
+import { BarChart } from "@/components/ui/bar-chart";
 import { Card, CardContent } from "@/components/ui/card";
 import { SuburbBadge } from "@/components/ui/suburb-badge";
 import { StarRating } from "@/components/ui/star-rating";
@@ -307,6 +313,54 @@ export default async function AgentProfilePage({
                 {agent.phone}
               </a>
             )}
+            {(agent.linkedinUrl || agent.facebookUrl || agent.instagramUrl || agent.websiteUrl) && (
+              <div className="flex items-center gap-3">
+                {agent.linkedinUrl && (
+                  <a
+                    href={agent.linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-700 hover:text-voqo-green transition-colors"
+                    aria-label="LinkedIn"
+                  >
+                    <Linkedin className="w-5 h-5" />
+                  </a>
+                )}
+                {agent.facebookUrl && (
+                  <a
+                    href={agent.facebookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-700 hover:text-voqo-green transition-colors"
+                    aria-label="Facebook"
+                  >
+                    <Facebook className="w-5 h-5" />
+                  </a>
+                )}
+                {agent.instagramUrl && (
+                  <a
+                    href={agent.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-700 hover:text-voqo-green transition-colors"
+                    aria-label="Instagram"
+                  >
+                    <Instagram className="w-5 h-5" />
+                  </a>
+                )}
+                {agent.websiteUrl && (
+                  <a
+                    href={agent.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-700 hover:text-voqo-green transition-colors"
+                    aria-label="Website"
+                  >
+                    <Globe className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
+            )}
             <Button variant="primary" size="sm">
               <MessageCircle className="w-4 h-4 mr-1.5" />
               Talk to {agent.firstName}&apos;s Assistant
@@ -371,6 +425,43 @@ export default async function AgentProfilePage({
           />
         </div>
       </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Property Type Breakdown                                              */}
+      {/* ------------------------------------------------------------------ */}
+      {(() => {
+        const propertyTypeCounts = (agent.sales ?? []).reduce((acc, sale) => {
+          const type = sale.propertyType;
+          if (type) {
+            acc[type] = (acc[type] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>);
+
+        const colorMap: Record<string, string> = {
+          House: "#26C169",
+          Unit: "#3B82F6",
+          Land: "#F97316",
+          Townhouse: "#8B5CF6",
+        };
+
+        const chartData = Object.entries(propertyTypeCounts).map(([label, value]) => ({
+          label,
+          value,
+          color: colorMap[label],
+        }));
+
+        if (chartData.length === 0) return null;
+
+        return (
+          <section className="mb-10">
+            <h2 className="font-heading text-xl font-bold mb-4">
+              Property Type Breakdown
+            </h2>
+            <DonutChart data={chartData} />
+          </section>
+        );
+      })()}
 
       {/* ------------------------------------------------------------------ */}
       {/* Suburbs Served                                                      */}
@@ -664,7 +755,57 @@ export default async function AgentProfilePage({
                   ? "s"
                   : ""})
               </span>
+              {(() => {
+                const wouldHireCount = allReviews.filter((r) => r.overallRating >= 4).length;
+                const wouldHirePercent = Math.round((wouldHireCount / allReviews.length) * 100);
+                return (
+                  <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                    {wouldHirePercent}% Would Hire Again
+                  </span>
+                );
+              })()}
             </div>
+
+            {/* Sub-ratings bar chart */}
+            {(() => {
+              const reviewsWithSubRatings = allReviews.filter(
+                (r) =>
+                  r.communicationRating != null ||
+                  r.knowledgeRating != null ||
+                  r.negotiationRating != null
+              );
+              if (reviewsWithSubRatings.length === 0) return null;
+
+              const avgCommunication =
+                reviewsWithSubRatings.filter((r) => r.communicationRating != null).length > 0
+                  ? reviewsWithSubRatings.reduce((sum, r) => sum + (r.communicationRating ?? 0), 0) /
+                    reviewsWithSubRatings.filter((r) => r.communicationRating != null).length
+                  : null;
+              const avgKnowledge =
+                reviewsWithSubRatings.filter((r) => r.knowledgeRating != null).length > 0
+                  ? reviewsWithSubRatings.reduce((sum, r) => sum + (r.knowledgeRating ?? 0), 0) /
+                    reviewsWithSubRatings.filter((r) => r.knowledgeRating != null).length
+                  : null;
+              const avgNegotiation =
+                reviewsWithSubRatings.filter((r) => r.negotiationRating != null).length > 0
+                  ? reviewsWithSubRatings.reduce((sum, r) => sum + (r.negotiationRating ?? 0), 0) /
+                    reviewsWithSubRatings.filter((r) => r.negotiationRating != null).length
+                  : null;
+
+              const subRatingsData = [
+                avgCommunication != null && { label: "Communication", value: avgCommunication },
+                avgKnowledge != null && { label: "Knowledge", value: avgKnowledge },
+                avgNegotiation != null && { label: "Negotiation", value: avgNegotiation },
+              ].filter(Boolean) as { label: string; value: number }[];
+
+              if (subRatingsData.length === 0) return null;
+
+              return (
+                <div className="max-w-md mb-6">
+                  <BarChart data={subRatingsData} />
+                </div>
+              );
+            })()}
 
             <div className="space-y-4">
               {paginatedReviews.map((review) => (
@@ -673,9 +814,23 @@ export default async function AgentProfilePage({
                   className="bg-white border-2 border-black rounded-lg p-5"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-sm">
-                      {review.reviewerName ?? "Anonymous"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm">
+                        {review.reviewerName ?? "Anonymous"}
+                      </span>
+                      {review.reviewerType && (
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
+                            review.reviewerType.toLowerCase() === "buyer"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-purple-100 text-purple-700"
+                          }`}
+                        >
+                          {review.reviewerType.charAt(0).toUpperCase() +
+                            review.reviewerType.slice(1).toLowerCase()}
+                        </span>
+                      )}
+                    </div>
                     {review.reviewDate && (
                       <span className="text-xs text-gray-500">
                         {formatDate(review.reviewDate)}

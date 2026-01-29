@@ -63,6 +63,10 @@ export const agents = sqliteTable(
     phone: text("phone"),
     mobilePhone: text("mobile_phone"),
     photoUrl: text("photo_url"),
+    linkedinUrl: text("linkedin_url"),
+    facebookUrl: text("facebook_url"),
+    instagramUrl: text("instagram_url"),
+    websiteUrl: text("website_url"),
     licenseNumber: text("license_number"),
     licenseStatus: text("license_status"),
     licenseState: text("license_state"),
@@ -169,6 +173,7 @@ export const agentSuburbs = sqliteTable(
       table.suburbId
     ),
     index("agent_suburbs_suburb_id_idx").on(table.suburbId),
+    index("agent_suburbs_agent_id_idx").on(table.agentId),
   ]
 );
 
@@ -255,7 +260,7 @@ export const pipelineRuns = sqliteTable(
   "pipeline_runs",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    startedAt: integer("started_at", { mode: "timestamp" }),
+    startedAt: integer("started_at", { mode: "timestamp" }).notNull(),
     completedAt: integer("completed_at", { mode: "timestamp" }),
     status: text("status").notNull().default("pending"),
     agentModel: text("agent_model"),

@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-> Last updated: 2026-01-29 18:50
+> Last updated: 2026-01-29 20:30
 > Current phase: 6/8 — Pages (polish remaining)
-> Progress: 73 completed / 92 total tasks
+> Progress: 82 completed / 92 total tasks
 
 > **prompt_build** and **prompt_plan**: Read `AGENTS.md` at the beginning of every conversation before taking any action. It contains critical build fixes and gotchas.
 
@@ -43,32 +43,34 @@ None. All blocking items resolved.
 ## PHASE 6: Pages (Active)
 
 ### TASK-001: Agent header agency logo ✓
-- **Status:** `complete`
+- **Status:** `completed`
 - **Scope:** Add 40px agency logo next to agent name in header section
 - **Files:** `src/app/agent/[slug]/page.tsx`
 - **Verification:**
   - [x] `pnpm typecheck` passes
   - [x] `pnpm build` passes
-  - [x] Playwright: navigate to `/agent/[slug]`, verify agency logo visible (already implemented)
+  - [x] Already implemented at lines 242-259 with h-10 (40px)
+- **Feedback:** Already implemented. Logo displays at 40px (h-10) next to agent name when agency.logoUrl exists.
 
-### TASK-002: Agent header social links
-- **Status:** `pending`
+### TASK-002: Agent header social links ✓
+- **Status:** `completed`
 - **Scope:** Add LinkedIn, Facebook, Instagram, website icon links to agent header
 - **Files:** `src/app/agent/[slug]/page.tsx`, `src/components/ui/social-links.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify social icons render with correct hrefs
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify social icons render with correct hrefs
+- **Feedback:** Implemented SocialLinks component with LinkedIn, Facebook, Instagram, Website icons. Renders in agent header when URLs present.
 
-### TASK-003: Agent property type donut chart
-- **Status:** `pending`
-- **Blocked by:** TASK-014
+### TASK-003: Agent property type donut chart ✓
+- **Status:** `completed`
 - **Scope:** Add donut chart showing property type breakdown (house/unit/land/townhouse)
 - **Files:** `src/app/agent/[slug]/page.tsx`, `src/components/ui/donut-chart.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify chart renders with correct percentages
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify chart renders with correct percentages
+- **Feedback:** Integrated DonutChart in agent page stats section. Shows property type distribution from sales data.
 
 ### TASK-004: Agent sales filters ✓
 - **Status:** `complete`
@@ -97,34 +99,35 @@ None. All blocking items resolved.
   - [x] `pnpm build` passes
   - [x] Playwright: verify icons + badges render
 
-### TASK-007: Agent reviews sub-ratings chart
-- **Status:** `pending`
-- **Blocked by:** TASK-015
+### TASK-007: Agent reviews sub-ratings chart ✓
+- **Status:** `completed`
 - **Scope:** Add horizontal bar chart for sub-ratings (Communication, Knowledge, Negotiation, etc.)
 - **Files:** `src/app/agent/[slug]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify bar chart renders with correct values
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify bar chart renders with correct values
+- **Feedback:** Integrated BarChart in reviews section. Shows Communication, Knowledge, Negotiation, Professionalism ratings.
 
-### TASK-008: Agent reviews metadata
-- **Status:** `pending`
+### TASK-008: Agent reviews metadata ✓
+- **Status:** `completed`
 - **Scope:** Add "Would Hire Again" %, buyer/seller badge, verified badge to review cards
 - **Files:** `src/app/agent/[slug]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify badges render on review cards
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify badges render on review cards
+- **Feedback:** Added wouldHireAgain %, reviewerType badge (Buyer/Seller), verified checkmark to review cards.
 
-### TASK-009: Agency stats section
-- **Status:** `pending`
-- **Blocked by:** TASK-015
+### TASK-009: Agency stats section ✓
+- **Status:** `completed`
 - **Scope:** Add performance grid + property type bar chart to agency profile
 - **Files:** `src/app/agency/[slug]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify stats section renders
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify stats section renders
+- **Feedback:** Added agency stats grid with agent count, total sales, avg price. BarChart shows property type distribution.
 
 ### TASK-010: State page sort controls ✓
 - **Status:** `complete`
@@ -144,14 +147,15 @@ None. All blocking items resolved.
   - [x] `pnpm build` passes
   - [x] Playwright: verify sort controls work with URL params
 
-### TASK-012: Agencies page card stats
-- **Status:** `pending`
+### TASK-012: Agencies page card stats ✓
+- **Status:** `completed`
 - **Scope:** Add total sales value, avg price to agency cards
 - **Files:** `src/app/agencies/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify stats display on cards
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify stats display on cards
+- **Feedback:** Agency cards now show total sales value and avg price alongside agent count.
 
 ---
 
@@ -166,23 +170,25 @@ None. All blocking items resolved.
   - [ ] `pnpm build` passes
   - [ ] Playwright: resize to 375px, verify overlay opens from nav
 
-### TASK-014: DonutChart component
-- **Status:** `pending`
+### TASK-014: DonutChart component ✓
+- **Status:** `completed`
 - **Scope:** Create reusable donut chart for property type breakdown
 - **Files:** `src/components/ui/donut-chart.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Component renders with test data
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Component renders with test data
+- **Feedback:** Created SVG-based DonutChart with color-coded segments, legend, and percentage labels.
 
-### TASK-015: BarChart component
-- **Status:** `pending`
+### TASK-015: BarChart component ✓
+- **Status:** `completed`
 - **Scope:** Create horizontal bar chart for sub-ratings display
 - **Files:** `src/components/ui/bar-chart.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Component renders with test data
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Component renders with test data
+- **Feedback:** Created BarChart with horizontal bars, labels, and value display. Used in agent reviews and agency stats.
 
 ### TASK-016: Form primitives
 - **Status:** `pending`
@@ -424,6 +430,16 @@ None. All blocking items resolved.
 - **Verification:**
   - [ ] `pnpm typecheck` passes
   - [ ] Queries return boolean
+
+### TASK-050: Add social URL fields to agent schema ✓
+- **Status:** `completed`
+- **Scope:** Add linkedinUrl, facebookUrl, instagramUrl (nullable text) to agents table
+- **Files:** `src/lib/db/schema.ts`, drizzle migration
+- **Verification:**
+  - [x] `pnpm db:generate` creates migration
+  - [x] `pnpm db:migrate` applies
+  - [x] Fields exist in agents table
+- **Feedback:** Added linkedinUrl, facebookUrl, instagramUrl to agents schema. Migration applied successfully.
 
 ---
 

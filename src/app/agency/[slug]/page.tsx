@@ -6,6 +6,7 @@ import { AgentCard } from "@/components/agent/agent-card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Card, CardContent } from "@/components/ui/card";
+import { BarChart } from "@/components/ui/bar-chart";
 import {
   Table,
   TableHeader,
@@ -257,6 +258,72 @@ export default async function AgencyProfilePage({ params, searchParams }: PagePr
           />
         </div>
       </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Performance Overview                                                */}
+      {/* ------------------------------------------------------------------ */}
+      {(() => {
+        // Calculate property type distribution
+        const propertyTypeCounts: Record<string, number> = {};
+        for (const sale of recentSalesData) {
+          const type = sale.propertyType || "Other";
+          propertyTypeCounts[type] = (propertyTypeCounts[type] || 0) + 1;
+        }
+        const propertyTypeData = Object.entries(propertyTypeCounts)
+          .map(([label, value]) => ({ label, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 6);
+
+        // Calculate unique suburbs from recent sales
+        const suburbsCovered = new Set(
+          recentSalesData.filter(s => s.suburb).map(s => s.suburb!)
+        ).size;
+
+        const hasData = propertyTypeData.length > 0 || suburbsCovered > 0;
+        if (!hasData) return null;
+
+        return (
+          <section className="mb-10">
+            <h2 className="font-heading text-xl font-bold mb-4">Performance Overview</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Property Type Distribution */}
+              {propertyTypeData.length > 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-medium mb-3 flex items-center gap-2">
+                      <Home className="w-4 h-4 text-voqo-green" />
+                      Property Types Sold
+                    </h3>
+                    <BarChart data={propertyTypeData} showCount />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Performance Metrics */}
+              {suburbsCovered > 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-medium mb-3 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-voqo-green" />
+                      Coverage Metrics
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-gray-50 rounded-lg border-2 border-black">
+                        <div className="text-2xl font-bold text-voqo-green">{suburbsCovered}</div>
+                        <div className="text-sm text-gray-600">Suburbs Covered</div>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg border-2 border-black">
+                        <div className="text-2xl font-bold text-voqo-green">{recentSalesData.length}</div>
+                        <div className="text-sm text-gray-600">Recent Sales</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ------------------------------------------------------------------ */}
       {/* Agent Roster (6.4.4 - with sort controls)                           */}

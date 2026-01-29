@@ -8,6 +8,13 @@
       "when": 1769577393478,
       "tag": "0000_square_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1769648355183,
+      "tag": "0001_green_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

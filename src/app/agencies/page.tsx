@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, Users, BarChart3 } from "lucide-react";
+import { Building2, Users, BarChart3, DollarSign } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Pagination } from "@/components/ui/pagination";
@@ -182,7 +182,7 @@ export default async function AgenciesPage({ searchParams }: PageProps) {
                     )}
                   </CardContent>
                   <CardFooter>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                       <span className="inline-flex items-center gap-1">
                         <Users className="w-3.5 h-3.5" />
                         {formatNumber(agency.totalAgents ?? 0)} agents
@@ -191,6 +191,17 @@ export default async function AgenciesPage({ searchParams }: PageProps) {
                         <BarChart3 className="w-3.5 h-3.5" />
                         {formatNumber(agency.totalSalesCount ?? 0)} sales
                       </span>
+                      {agency.totalSalesVolume != null && agency.totalSalesVolume > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <DollarSign className="w-3.5 h-3.5" />
+                          {formatCompactPrice(agency.totalSalesVolume)}
+                        </span>
+                      )}
+                      {agency.avgPrice != null && (
+                        <span className="inline-flex items-center gap-1 text-gray-400">
+                          avg {formatCompactPrice(agency.avgPrice)}
+                        </span>
+                      )}
                     </div>
                   </CardFooter>
                 </Card>

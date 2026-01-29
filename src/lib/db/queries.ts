@@ -456,53 +456,65 @@ export async function getAgencyEnrichment(agencyId: number): Promise<AgencyEnric
   };
 }
 
+export type AgencyWithStats = Agency & {
+  avgPrice: number | null;
+};
+
 export async function getAgenciesList(filters: {
   state?: string;
   sort?: "name" | "agents" | "sales";
   page?: number;
   limit?: number;
-}): Promise<{ agencies: Agency[]; total: number }> {
+}): Promise<{ agencies: AgencyWithStats[]; total: number }> {
   const pageSize = Math.min(filters.limit ?? 20, 50);
   const page = filters.page ?? 1;
   const offset = (page - 1) * pageSize;
 
-  const whereClause = filters.state
-    ? eq(agencies.state, filters.state)
-    : undefined;
+  // Build WHERE clause
+  const stateClause = filters.state ? "WHERE state = ?" : "";
+  const params: (string | number)[] = filters.state ? [filters.state] : [];
 
-  let orderByClause;
+  // Determine ORDER BY
+  let orderBy: string;
   switch (filters.sort) {
     case "name":
-      orderByClause = [asc(agencies.name)];
+      orderBy = "name ASC";
       break;
     case "agents":
-      orderByClause = [desc(agencies.totalAgents)];
+      orderBy = "total_agents DESC NULLS LAST";
       break;
     case "sales":
-      orderByClause = [desc(agencies.totalSalesCount)];
+      orderBy = "total_sales_count DESC NULLS LAST";
       break;
     default:
-      orderByClause = [asc(agencies.name)];
+      orderBy = "name ASC";
   }
 
-  const rows = db.query.agencies
-    .findMany({
-      where: whereClause,
-      orderBy: orderByClause,
-      limit: pageSize,
-      offset,
-    })
-    .sync();
+  // Query agencies with avg_price computed from agents
+  const rows = sqliteDb
+    .prepare(
+      `SELECT ag.*,
+              (SELECT AVG(a.median_sale_price)
+               FROM agents a
+               WHERE a.agency_id = ag.id AND a.median_sale_price IS NOT NULL) as avg_price
+       FROM agencies ag
+       ${stateClause}
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`
+    )
+    .all(...params, pageSize, offset) as (Agency & { avg_price: number | null })[];
 
-  const totalResult = db
-    .select({ value: count() })
-    .from(agencies)
-    .where(whereClause)
-    .get();
+  // Get total count
+  const countResult = sqliteDb
+    .prepare(`SELECT COUNT(*) as cnt FROM agencies ${stateClause}`)
+    .get(...params) as { cnt: number };
 
   return {
-    agencies: rows,
-    total: totalResult?.value ?? 0,
+    agencies: rows.map((r) => ({
+      ...r,
+      avgPrice: r.avg_price ? Math.round(r.avg_price) : null,
+    })),
+    total: countResult?.cnt ?? 0,
   };
 }
 

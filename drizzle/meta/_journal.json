@@ -29,6 +29,13 @@
       "when": 1769650111641,
       "tag": "0003_chubby_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1769660311554,
+      "tag": "0004_colossal_rogue",
+      "breakpoints": true
     }
   ]
 }

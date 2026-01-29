@@ -1,10 +1,9 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3", "drizzle-orm"],
   // Exclude non-Next.js directories from webpack compilation
-  webpack: (config) => {
+  webpack: (config, { isServer, dev }) => {
     config.watchOptions = {
       ...config.watchOptions,
       ignored: [
@@ -14,6 +13,15 @@ const nextConfig: NextConfig = {
         "**/.git/**",
       ],
     };
+
+    // Work around occasional server chunk-path mismatch during prerender/build
+    // (runtime expects `./<id>.js` but chunks are emitted under `server/chunks/`).
+    if (!dev && isServer && typeof config.output?.chunkFilename === "string") {
+      if (!config.output.chunkFilename.includes("chunks/")) {
+        config.output.chunkFilename = "chunks/[id].js";
+      }
+    }
+
     return config;
   },
   images: {

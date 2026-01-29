@@ -13,7 +13,7 @@ export function SuburbVoiceButton({ suburbName }: SuburbVoiceButtonProps) {
 
   const handleClick = () => {
     if (status === 'idle') {
-      startSession();
+      startSession('assistant');
     }
   };
 

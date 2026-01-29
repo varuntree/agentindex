@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
 
     const voiceMode = body.voice_mode || 'navigator';
     let systemPrompt = '';
-    let variables: Record<string, unknown> = {};
     let firstMessage = '';
+    let dynamicVariables: Record<string, unknown> = {};
 
     if (voiceMode === 'navigator') {
       // Navigator mode - site-wide guide
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       // Get site stats for context
       const stats = await getSiteStats();
       const currentSlug = body.agent_slug || body.agency_slug || body.suburb_slug || '';
-      variables = {
+      dynamicVariables = {
         current_page: body.page_type,
         current_slug: currentSlug,
         total_agents: stats.totalAgents,
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
           agentContext
         );
         firstMessage = buildAgentFirstMessage(agentData.full_name);
-        variables = {
+        dynamicVariables = {
           agent_name: agentData.full_name,
           agency_name: agentData.agency_name,
           agent_context: agentContext,
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         const agencyContext = buildAgencyContext(agencyData);
         systemPrompt = buildAgencySystemPrompt(agencyData.name, agencyContext);
         firstMessage = buildAgencyFirstMessage(agencyData.name);
-        variables = {
+        dynamicVariables = {
           agency_name: agencyData.name,
           agency_context: agencyContext,
         };
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
           suburbContext
         );
         firstMessage = buildSuburbFirstMessage(suburbData.name);
-        variables = {
+        dynamicVariables = {
           suburb_name: suburbData.name,
           state: suburbData.state,
           suburb_context: suburbContext,
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
         systemPrompt = NAVIGATOR_SYSTEM_PROMPT;
         firstMessage = NAVIGATOR_FIRST_MESSAGE;
         const stats = await getSiteStats();
-        variables = {
+        dynamicVariables = {
           current_page: 'home',
           current_slug: '',
           total_agents: stats.totalAgents,
@@ -184,17 +184,18 @@ export async function POST(request: NextRequest) {
     // Generate signed URL with session info
     const result = await createSignedUrl({
       systemPrompt,
-      variables,
       firstMessage,
+      dynamicVariables,
     });
 
-    // Return per spec: signedUrl, sessionId, expiresAt (+ overrides for client)
+    // Return signedUrl, sessionId, expiresAt, overrides, dynamicVariables
     return NextResponse.json(
       {
         signedUrl: result.signedUrl,
         sessionId: result.sessionId,
         expiresAt: result.expiresAt,
         overrides: result.overrides,
+        dynamicVariables: result.dynamicVariables,
       },
       {
         status: 200,

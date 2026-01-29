@@ -16,7 +16,7 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'chi
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className = '', options, placeholder, error = false, ...props }, ref) => {
+  ({ className = '', options = [], placeholder, error = false, ...props }, ref) => {
     return (
       <div className="relative">
         <select

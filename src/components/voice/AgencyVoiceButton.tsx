@@ -13,7 +13,7 @@ export function AgencyVoiceButton({ agencyName }: AgencyVoiceButtonProps) {
 
   const handleClick = () => {
     if (status === 'idle') {
-      startSession();
+      startSession('assistant');
     }
   };
 

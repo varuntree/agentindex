@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import {
   Mail,
   Phone,
-  MessageCircle,
   BarChart3,
   DollarSign,
   TrendingUp,
@@ -52,6 +51,7 @@ import {
 import { agentBreadcrumbJsonLd, agentJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
 import { agentMetadata } from "@/lib/seo/metadata";
 import { VoiceContextSetterWrapper } from "@/components/voice/VoiceContextSetterWrapper";
+import { AgentVoiceButtonWrapper } from "@/components/voice/AgentVoiceButtonWrapper";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -361,10 +361,7 @@ export default async function AgentProfilePage({
                 )}
               </div>
             )}
-            <Button variant="primary" size="sm">
-              <MessageCircle className="w-4 h-4 mr-1.5" />
-              Talk to {agent.firstName}&apos;s Assistant
-            </Button>
+            <AgentVoiceButtonWrapper agentFirstName={agent.firstName} />
           </div>
         </div>
       </section>

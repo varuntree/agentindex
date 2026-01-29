@@ -6,23 +6,43 @@ import { randomUUID } from 'crypto';
 
 interface SignedUrlOptions {
   systemPrompt: string;
-  variables: Record<string, unknown>;
   firstMessage: string;
+  dynamicVariables: Record<string, unknown>;
 }
 
 interface ElevenLabsSignedUrlResponse {
   signed_url: string;
 }
 
+/**
+ * ElevenLabs overrides structure per their docs
+ * @see https://elevenlabs.io/docs/agents-platform/customization/personalization/overrides
+ */
+export interface ElevenLabsOverrides {
+  agent?: {
+    prompt?: {
+      prompt: string;
+    };
+    firstMessage?: string;
+    language?: string;
+  };
+  tts?: {
+    voiceId?: string;
+    stability?: number;
+    speed?: number;
+    similarity_boost?: number;
+  };
+  conversation?: {
+    textOnly?: boolean;
+  };
+}
+
 export interface SignedUrlResult {
   signedUrl: string;
   sessionId: string;
   expiresAt: string;
-  overrides: {
-    prompt: { prompt: string };
-    first_message: string;
-    variables: Record<string, unknown>;
-  };
+  overrides: ElevenLabsOverrides;
+  dynamicVariables: Record<string, unknown>;
 }
 
 /**
@@ -32,7 +52,7 @@ export interface SignedUrlResult {
 export async function createSignedUrl(
   options: SignedUrlOptions
 ): Promise<SignedUrlResult> {
-  const { systemPrompt, variables, firstMessage } = options;
+  const { systemPrompt, firstMessage, dynamicVariables } = options;
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
   const agentId = process.env.ELEVENLABS_AGENT_ID;
@@ -45,14 +65,13 @@ export async function createSignedUrl(
     throw new Error('ELEVENLABS_AGENT_ID is not configured');
   }
 
-  // POST to ElevenLabs signed URL endpoint (hyphenated path)
+  // GET to ElevenLabs signed URL endpoint
   const response = await fetch(
-    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
+    `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
     {
-      method: 'POST',
+      method: 'GET',
       headers: {
         'xi-api-key': apiKey,
-        'Content-Type': 'application/json',
       },
     }
   );
@@ -66,16 +85,20 @@ export async function createSignedUrl(
 
   // Generate session tracking info
   const sessionId = randomUUID();
-  // Signed URLs expire in 5 minutes per ElevenLabs docs
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  // Signed URLs are short-lived (keep for UI/debug only; active connections continue once established).
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-  // Build overrides for client-side session start
-  const overrides = {
-    prompt: {
-      prompt: systemPrompt,
+  /**
+   * Build overrides in CORRECT ElevenLabs format
+   * Per docs: { agent: { prompt: { prompt: string }, firstMessage: string } }
+   */
+  const overrides: ElevenLabsOverrides = {
+    agent: {
+      prompt: {
+        prompt: systemPrompt,
+      },
+      firstMessage: firstMessage,
     },
-    first_message: firstMessage,
-    variables,
   };
 
   return {
@@ -83,6 +106,7 @@ export async function createSignedUrl(
     sessionId,
     expiresAt,
     overrides,
+    dynamicVariables,
   };
 }
 

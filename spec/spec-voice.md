@@ -240,7 +240,13 @@ const navigatorTools = {
       required: ["path"]
     },
     handler: async ({ path }: { path: string }) => {
-      window.location.href = path;
+      // IMPORTANT: avoid full page reloads (which drop the active voice WebSocket session).
+      // Delegate to Next.js App Router navigation via a custom event handled by VoiceProvider.
+      window.dispatchEvent(
+        new CustomEvent('voice-navigate', {
+          detail: { href: path, replace: false, scroll: true }
+        })
+      );
       return "Navigated successfully";
     }
   },
@@ -296,7 +302,13 @@ const navigatorTools = {
       const params = new URLSearchParams(window.location.search);
       if (sort) params.set('sort', sort);
       if (propertyType) params.set('type', propertyType);
-      window.location.search = params.toString();
+      const qs = params.toString();
+      const href = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+      window.dispatchEvent(
+        new CustomEvent('voice-navigate', {
+          detail: { href, replace: true, scroll: false }
+        })
+      );
       return "Filters applied";
     }
   },
@@ -335,10 +347,10 @@ const navigatorTools = {
       },
       required: ["slug"]
     },
-    handler: async ({ slug }: { slug: string }) => {
+    handler: async ({ slug, entityType }: { slug: string; entityType?: 'agent' | 'agency' | 'suburb' }) => {
       window.dispatchEvent(
         new CustomEvent('voice-mode-change', {
-          detail: { mode: 'assistant', slug }
+          detail: { mode: 'assistant', slug, entityType }
         })
       );
       return "Switching to assistant mode";
@@ -373,6 +385,23 @@ const navigatorTools = {
 };
 ```
 
+### Tool Response Requirements (Critical)
+
+- Client tool return values **must be JSON-serializable** (no `Window`, `HTMLElement`, `Event`, or other circular/DOM objects).
+- If a tool needs to return “something complex”, return a small plain object or a string summary.
+- Internal navigation tools must use **soft routing** (App Router) and must not force a full page reload.
+
+### Additional Data Tools (Recommended)
+
+To make the voice agent reliable and scalable (without huge prompt injections), add DB-backed tools that fetch facts on-demand via public read-only API routes:
+
+- `getAgentProfile({ slug })` → `GET /api/agent/[slug]`
+- `getAgencyProfile({ slug })` → `GET /api/agency/[slug]`
+- `getSuburbProfile({ slug })` → `GET /api/suburb/[slug]`
+- `listAgents({ suburb?, agency?, state?, sort?, propertyType?, page?, limit? })` → `GET /api/agents?...`
+
+These tools should return small, structured objects (name, key stats, top agents) to keep voice responses fast and avoid hallucinations.
+
 ### First Message
 
 ```
@@ -404,7 +433,7 @@ Your role:
 
 Rules:
 - Speak as a professional assistant representing this agent
-- Only share information you have in context — don't make up sales or stats
+- Only share information you have in context or can fetch via tools — don't make up sales or stats
 - Be warm, professional, concise
 - Use Australian English
 - Keep responses under 30 seconds
@@ -428,7 +457,7 @@ Your role:
 
 Rules:
 - Speak as a professional receptionist for this agency
-- Only share information you have in context
+- Only share information you have in context or can fetch via tools
 - Be warm, professional, concise
 - Use Australian English
 - Keep responses under 30 seconds
@@ -453,7 +482,7 @@ Your role:
 Rules:
 - Be helpful and conversational
 - Don't push any specific agent — recommend based on fit
-- Only share information you have in context
+- Only share information you have in context or can fetch via tools
 - Use Australian English
 - Keep responses under 30 seconds
 ```
@@ -663,7 +692,7 @@ Your role:
 
 Rules:
 - Speak as a professional assistant representing this agent
-- Only share information you have in context — don't make up sales or stats
+- Only share information you have in context or can fetch via tools — don't make up sales or stats
 - Be warm, professional, concise
 - Use Australian English
 - Keep responses under 30 seconds
@@ -695,7 +724,7 @@ Your role:
 
 Rules:
 - Speak as a professional receptionist for this agency
-- Only share information you have in context
+- Only share information you have in context or can fetch via tools
 - Be warm, professional, concise
 - Use Australian English
 - Keep responses under 30 seconds
@@ -727,7 +756,7 @@ Your role:
 Rules:
 - Be helpful and conversational
 - Don't push any specific agent — recommend based on fit
-- Only share information you have in context
+- Only share information you have in context or can fetch via tools
 - Use Australian English
 - Keep responses under 30 seconds`;
 
@@ -954,19 +983,30 @@ function AudioWaveform({ isSpeaking }: { isSpeaking: boolean }) {
 **Flow:**
 1. Navigator tool `activateAssistant` called
 2. Dispatch custom event with mode change
-3. End current session
-4. Start new session with Assistant config
+3. If a voice session is already active, keep it connected and send a contextual update (no mid-conversation cut)
+4. If no session is active, start a new session in the requested mode
 
 ```typescript
 // Listen for mode change events
 useEffect(() => {
-  const handleModeChange = (e: CustomEvent) => {
-    const { mode, slug } = e.detail;
+  const handleModeChange = async (e: CustomEvent) => {
+    const { mode, slug, entityType } = e.detail as {
+      mode: 'navigator' | 'assistant';
+      slug?: string;
+      entityType?: 'agent' | 'agency' | 'suburb';
+    };
+
     if (mode === 'assistant') {
-      endSession().then(() => {
-        setVoiceMode('assistant');
-        startSession();
-      });
+      setVoiceMode('assistant');
+
+      // If a session is already active, do NOT end it — keep the WebSocket alive.
+      // Optional: navigate to the target entity (agent/agency) using soft routing.
+      // Then send a contextual update (non-interrupting) so the agent can switch persona and fetch facts via tools.
+      //
+      // await conversation.sendContextualUpdate("Context update (mode-change): voice_mode=assistant ...");
+    } else {
+      setVoiceMode('navigator');
+      // Same idea: keep session alive and send a contextual update.
     }
   };
 
@@ -983,7 +1023,7 @@ useEffect(() => {
 
 **Implementation:** Same pattern, reverse direction
 
-**Rule:** Only one mode active at a time — starting one ends the other
+**Rule:** Mode switching should not force a disconnect. Prefer contextual updates over ending/restarting sessions.
 
 ---
 

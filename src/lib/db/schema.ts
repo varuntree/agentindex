@@ -289,6 +289,7 @@ export const pipelineRuns = sqliteTable(
     status: text("status").notNull().default("pending"),
     agentModel: text("agent_model"),
     targetLocation: text("target_location"),
+    requestJson: text("request_json"),
     agenciesFound: integer("agencies_found").default(0),
     agentsFound: integer("agents_found").default(0),
     salesFound: integer("sales_found").default(0),
@@ -302,6 +303,59 @@ export const pipelineRuns = sqliteTable(
   (table) => [
     index("pipeline_runs_status_idx").on(table.status),
     index("pipeline_runs_started_at_idx").on(table.startedAt),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// 9. pipelineEvents (append-only event log for pipeline runs)
+// ---------------------------------------------------------------------------
+export const pipelineEvents = sqliteTable(
+  "pipeline_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: integer("run_id")
+      .notNull()
+      .references(() => pipelineRuns.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    phase: integer("phase"),
+    subAgentId: integer("sub_agent_id"),
+    message: text("message"),
+    payloadJson: text("payload_json"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("pipeline_events_run_id_idx").on(table.runId),
+    index("pipeline_events_type_idx").on(table.type),
+    index("pipeline_events_created_at_idx").on(table.createdAt),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// 10. pipelineSubAgents (run-scoped sub-agent state)
+// ---------------------------------------------------------------------------
+export const pipelineSubAgents = sqliteTable(
+  "pipeline_sub_agents",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: integer("run_id")
+      .notNull()
+      .references(() => pipelineRuns.id, { onDelete: "cascade" }),
+    subAgentId: integer("sub_agent_id").notNull(),
+    status: text("status").notNull().default("running"), // running|success|error
+    agentNamesJson: text("agent_names_json"),
+    goalsJson: text("goals_json"),
+    error: text("error"),
+    startedAt: integer("started_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    completedAt: integer("completed_at", { mode: "timestamp" }),
+  },
+  (table) => [
+    index("pipeline_sub_agents_run_id_idx").on(table.runId),
+    index("pipeline_sub_agents_run_sub_idx").on(table.runId, table.subAgentId),
+    index("pipeline_sub_agents_status_idx").on(table.status),
   ]
 );
 
@@ -357,6 +411,25 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   }),
 }));
 
+export const pipelineRunsRelations = relations(pipelineRuns, ({ many }) => ({
+  events: many(pipelineEvents),
+  subAgents: many(pipelineSubAgents),
+}));
+
+export const pipelineEventsRelations = relations(pipelineEvents, ({ one }) => ({
+  run: one(pipelineRuns, {
+    fields: [pipelineEvents.runId],
+    references: [pipelineRuns.id],
+  }),
+}));
+
+export const pipelineSubAgentsRelations = relations(pipelineSubAgents, ({ one }) => ({
+  run: one(pipelineRuns, {
+    fields: [pipelineSubAgents.runId],
+    references: [pipelineRuns.id],
+  }),
+}));
+
 // ===========================================================================
 // Inferred types
 // ===========================================================================
@@ -388,6 +461,14 @@ export type NewReview = InferInsertModel<typeof reviews>;
 // --- PipelineRun ---
 export type PipelineRun = InferSelectModel<typeof pipelineRuns>;
 export type NewPipelineRun = InferInsertModel<typeof pipelineRuns>;
+
+// --- PipelineEvent ---
+export type PipelineEventRow = InferSelectModel<typeof pipelineEvents>;
+export type NewPipelineEventRow = InferInsertModel<typeof pipelineEvents>;
+
+// --- PipelineSubAgent ---
+export type PipelineSubAgent = InferSelectModel<typeof pipelineSubAgents>;
+export type NewPipelineSubAgent = InferInsertModel<typeof pipelineSubAgents>;
 
 // --- VoiceSession ---
 export type VoiceSession = InferSelectModel<typeof voiceSessions>;

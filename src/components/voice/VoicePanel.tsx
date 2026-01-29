@@ -10,6 +10,7 @@ interface VoicePanelProps {
   voiceMode: VoiceMode;
   pageType: PageType;
   entityInfo: VoiceEntityInfo | null;
+  audioLevel: number;
   onStart: () => void;
   onEnd: () => void;
 }
@@ -59,23 +60,24 @@ export function VoicePanel({
   voiceMode,
   pageType,
   entityInfo,
+  audioLevel,
   onStart,
   onEnd,
 }: VoicePanelProps) {
   const buttonLabel =
     voiceMode === 'navigator'
-      ? 'Talk to Navigator'
+      ? 'Talk to AI'
       : getAssistantLabel(pageType, entityInfo);
 
   // Idle state - show floating button
   if (status === 'idle') {
     return (
       <button
-        onClick={onStart}
-        className="relative flex items-center gap-3 bg-primary text-white px-6 py-4 rounded-full shadow-lg hover:scale-105 transition-transform"
+        onClick={() => onStart()}
+        className="relative flex items-center gap-3 bg-voqo-green text-white px-6 py-4 rounded-full shadow-lg hover:bg-voqo-dark-green hover:scale-105 transition-all border-2 border-black"
         aria-label={buttonLabel}
       >
-        <div className="absolute inset-0 bg-primary rounded-full animate-ping opacity-25" />
+        <div className="absolute inset-0 bg-voqo-green rounded-full animate-ping opacity-25" />
         <Mic className="w-6 h-6 relative z-10" />
         <span className="font-medium relative z-10">{buttonLabel}</span>
       </button>
@@ -106,7 +108,7 @@ export function VoicePanel({
             <Mic className="w-5 h-5 text-white" />
           )}
         </div>
-        <AudioWaveform isSpeaking={isSpeakingState} />
+        <AudioWaveform isSpeaking={isSpeakingState} audioLevel={audioLevel} />
         <span className="font-medium min-w-[90px]">
           {isSpeakingState ? 'Speaking...' : 'Listening...'}
         </span>
@@ -132,7 +134,7 @@ export function VoicePanel({
               {error || 'Connection failed'}
             </p>
             <button
-              onClick={onStart}
+              onClick={() => onStart()}
               className="text-sm font-medium text-red-600 hover:text-red-700"
             >
               Try Again

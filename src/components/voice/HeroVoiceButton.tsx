@@ -9,7 +9,7 @@ export function HeroVoiceButton() {
 
   const handleClick = () => {
     if (status === 'idle') {
-      startSession();
+      startSession('navigator');
     }
   };
 

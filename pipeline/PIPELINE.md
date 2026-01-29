@@ -1,482 +1,343 @@
 # AgentIndex Data Pipeline
 
-A multi-agent AI pipeline for researching and collecting Australian real estate agent/agency data using the Claude Agent SDK.
+A simplified multi-agent AI pipeline for researching and collecting Australian real estate agent/agency data using the Claude Agent SDK.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Agent Definitions](#agent-definitions)
-- [Skill Prompts](#skill-prompts)
+- [Admin UI](#admin-ui)
+- [Skills](#skills)
 - [CLI Usage](#cli-usage)
-- [Progress Feedback](#progress-feedback)
 - [Data Flow](#data-flow)
-- [Configuration Options](#configuration-options)
+- [Configuration](#configuration)
 
 ---
 
 ## Overview
 
-The pipeline uses **Claude Agent SDK** to orchestrate AI agents that research real estate agencies and agents from public web sources. It collects:
+The pipeline uses **Claude Agent SDK** to orchestrate AI agents that research real estate agencies and agents from public web sources.
 
+**Data Collected:**
 - **Agency data** — name, logo, address, contact details
 - **Agent profiles** — name, photo, bio, contact, suburbs served
 - **Sales history** — recent property sales per agent
-- **Reviews** — aggregated from RateMyAgent, Google, agency websites
-
-All data is validated with Zod schemas and stored in SQLite via Drizzle ORM.
+- **Reviews** — from RateMyAgent, agency websites, general web search
 
 **Key Features:**
-- No API key needed (uses Claude Code Max subscription)
-- Parallel agent execution for speed
-- Structured output validation
-- Progress tracking with pipeline run IDs
-- Dry-run mode for testing
+- Simplified skills-based architecture
+- Parallel sub-agent execution (2 agents per sub-agent)
+- Admin UI with live streaming (/admin)
+- SSE for real-time progress updates
+- No license verification (removed)
 
 ---
 
 ## Architecture
 
 ```
-CLI (pipeline.ts)
-    ↓
-┌─────────────────────────────────────────────────────────────┐
-│                     ORCHESTRATOR                             │
-│                                                              │
-│  1. Agency Discovery Agent    →  Find agencies in location  │
-│  2. Team Discovery Agent      →  Get agency + all agents    │
-│  3. Agent Enrichment Agents   →  Sales + Reviews per agent  │
-│                                                              │
-│              (parallel execution via query())                │
-└─────────────────────────────────────────────────────────────┘
-    ↓
-Zod Schema Validation
-    ↓
-Drizzle ORM → SQLite (data/agentindex.db)
-    ↓
-Pipeline Run Logs (tracking table)
+Admin UI (/admin)
+    │
+    ├── SSE Stream (/api/pipeline/stream) ────────────────┐
+    │                                                     │
+    ▼                                                     ▼
+POST /api/pipeline/start                           Live Event Stream
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       MAIN ORCHESTRATOR                              │
+│                                                                     │
+│  1. Check DB for existing agents (avoid duplicates)                 │
+│  2. Phase 1: Agency Discovery (if agency not in DB)                 │
+│  3. Phase 2: Team Discovery → get list of agents from website       │
+│  4. Phase 3: Parallel sub-agents (2 agents each)                    │
+│                                                                     │
+│  All events broadcast via SSE to Admin UI                           │
+└─────────────────────────────────────────────────────────────────────┘
+         │
+         ├── Sub-Agent 1 (agents 1-2)  ──┐
+         ├── Sub-Agent 2 (agents 3-4)  ──┼── Promise.all()
+         ├── Sub-Agent N...            ──┘
+         │
+         ▼
+    SQLite DB (Drizzle ORM)
 ```
 
-### How It Works
+### Hierarchy
 
-1. **CLI parses arguments** — location, agencies, enrichment flags
-2. **Pipeline run created** — tracking record in `pipeline_runs` table
-3. **Agency discovery** — if `--discover-agencies`, agent searches for agencies
-4. **Per-agency research** — agent finds team page, extracts all agents
-5. **Per-agent enrichment** — parallel queries for sales and reviews
-6. **Data storage** — upsert to agencies, agents, sales, reviews tables
-7. **Run completion** — stats and errors recorded
+1. **Suburb** (dropdown from seeded DB)
+2. **Agency** (free text input)
+3. **Limit** (max 200 agents)
 
-### SDK Integration
+### Sub-Agent Batching
 
-The pipeline uses the Claude Agent SDK's `query()` function:
+Each sub-agent handles **2 agents** to optimize parallelism while keeping context manageable.
 
-```typescript
-import { query } from '@anthropic-ai/claude-agent-sdk';
-
-for await (const message of query({
-  prompt: researchPrompt,
-  options: {
-    allowedTools: ['WebSearch', 'WebFetch'],
-    maxTurns: 10,
-    maxBudgetUsd: 0.50,
-  },
-})) {
-  // Process streaming messages
-}
-```
-
-See [ai_docs/claude-agent-sdk.md](../ai_docs/claude-agent-sdk.md) for complete SDK reference.
+For 10 agents → 5 sub-agents running in parallel.
 
 ---
 
-## Agent Definitions
+## Admin UI
 
-Three specialized research agents handle different tasks:
+Access at `/admin` (protected by Basic auth).
 
-### 1. Agency Discovery Agent
+### Authentication
 
-**Purpose:** Find real estate agencies in a given location.
+Set in `.env`:
+```
+ADMIN_USER=admin
+ADMIN_PASS=your-secure-password
+```
 
-**Tools:** `WebSearch`, `WebFetch`
+### Features
 
-**Behavior:**
-- Searches for "real estate agencies in [location]"
-- Extracts agency names from search results
-- Returns list of agencies to research
+- **Suburb dropdown** — Select from seeded suburbs
+- **Agency input** — Free text agency name
+- **Limit input** — Max agents (up to 200)
+- **Live streaming** — Real-time events from main orchestrator + all sub-agents
+- **Status indicators** — Idle, Running, Complete, Error
 
-**Prompt location:** `pipeline/agents/index.ts` → `buildAgencyResearchPrompt()`
+### Event Types
 
-### 2. Team Discovery Agent
-
-**Purpose:** Research an agency and extract all agent profiles.
-
-**Tools:** `WebSearch`, `WebFetch`
-
-**Behavior:**
-1. Find agency's official website
-2. Navigate to team/agents page
-3. Extract agency details (logo, address, phone, email)
-4. For each agent, extract:
-   - Name (first + last)
-   - Photo URL
-   - Phone, email
-   - Bio
-   - Suburbs served
-   - Specializations
-
-**Output Schema:** `AgencyOutputSchema` with nested `agents[]`
-
-**Prompt location:** `AGENCY_RESEARCHER_PROMPT` in `pipeline/agents/index.ts`
-
-### 3. Agent Enrichment Agents
-
-**Purpose:** Deep-dive on individual agents for sales and reviews.
-
-Runs in parallel for each agent when `--no-sales` or `--no-reviews` not set.
-
-#### Sales Researcher
-
-**Behavior:**
-1. Search agency "Sold" listings
-2. Search Domain.com.au agent profile
-3. Search RateMyAgent sales stats
-4. Extract: address, price, date, property type, beds/baths
-
-**Output Schema:** `SaleOutputSchema[]`
-
-**Prompt:** `SALES_RESEARCHER_PROMPT`
-
-#### Review Aggregator
-
-**Behavior:**
-1. Search RateMyAgent reviews
-2. Search Google Business reviews
-3. Search agency testimonials page
-4. Extract: rating, text, date, reviewer type
-
-**Output Schema:** `ReviewOutputSchema[]`
-
-**Prompt:** `REVIEW_RESEARCHER_PROMPT`
+| Event | Description |
+|-------|-------------|
+| `init` | SSE connection established |
+| `info` | General information message |
+| `phase` | Pipeline phase change (1, 2, 3) |
+| `sub_agent_start` | Sub-agent spawned |
+| `sub_agent` | Sub-agent message |
+| `sub_agent_error` | Sub-agent failed |
+| `agent_stored` | Agent saved to DB |
+| `error` | Pipeline error |
+| `complete` | Pipeline finished |
 
 ---
 
-## Skill Prompts
+## Skills
 
-The pipeline uses a "skill prompting" pattern where each agent has a detailed system prompt defining their expertise and research methodology.
+Three simplified skill prompts in `pipeline/agents/skills.ts`:
 
-### Pattern Structure
+### 1. Agency Discovery
 
-```typescript
-export const AGENT_TYPE_PROMPT = `You are a [specialist role].
+Finds official agency website and extracts:
+- Name, brand name, logo
+- Website, phone, email
+- Address, suburb, state, postcode
 
-Given [input context], your task is to [primary goal].
+**Data sources:** Official .com.au websites (not Domain or realestate.com.au)
 
-## Research Steps:
-1. [Step one with specific source]
-2. [Step two with extraction details]
-3. [Step N...]
+### 2. Team Discovery
 
-## For each [entity], extract:
-- Field one (description)
-- Field two (constraints)
-- ...
+Navigates agency website to find all agents:
+- First name, last name
+- Photo URL
+- Phone, email
+- Profile page URL
 
-## Important Notes:
-- [Data quality guidance]
-- [Privacy/accuracy rules]
-- [Format requirements]
+**Pages checked:** /team, /our-team, /agents, /our-people
 
-## Output Format:
-Return [structured format description].`;
-```
+### 3. Agent Enrichment (2 agents per call)
 
-### Benefits
+Deep research on 2 agents simultaneously:
+- Bio, years experience, languages, specializations
+- Suburbs served
+- Sales history (address, price, date, property type)
+- Reviews (rating, text, reviewer, date, source)
 
-1. **Consistency** — Same research methodology every run
-2. **Quality** — Explicit instructions prevent hallucination
-3. **Debuggability** — Clear expectations for what agent should do
-4. **Modularity** — Easy to add new specialist agents
-
-### Prompt Builders
-
-Dynamic prompts are built at runtime with task-specific context:
-
-```typescript
-export function buildAgencyResearchPrompt(task: AgencyResearchTask): string {
-  return `${AGENCY_RESEARCHER_PROMPT}
-
-## Your Task:
-Research the agency "${task.agencyName}" located in ${task.location}.
-...`;
-}
-```
-
-This combines the base skill prompt with runtime parameters.
+**Data sources (priority):**
+1. Agency website
+2. RateMyAgent.com.au
+3. Domain.com.au
+4. General web search
 
 ---
 
 ## CLI Usage
 
-### Basic Syntax
+### Basic Commands
 
 ```bash
-pnpm pipeline:run --location "Suburb, STATE" [options]
+# Via Admin UI (recommended)
+# Navigate to /admin and use the form
+
+# Direct API call
+curl -X POST http://localhost:3000/api/pipeline/start \
+  -H "Content-Type: application/json" \
+  -d '{"suburbId": 123, "agencyName": "Ray White Bondi Beach", "limit": 50}'
 ```
 
-### Examples
+### Utility Scripts
 
-**Research specific agencies:**
 ```bash
-pnpm pipeline:run \
-  --location "Bondi Beach, NSW" \
-  --agencies "Ray White Bondi Beach,McGrath Estate Agents"
+# Validate configuration
+pnpm pipeline:validate --config pipeline-config.json
+
+# Generate run report
+pnpm pipeline:report --run-id abc123
+
+# Deduplicate entries
+pnpm pipeline:dedupe --dry-run
+pnpm pipeline:dedupe --execute
 ```
-
-**Auto-discover agencies:**
-```bash
-pnpm pipeline:run \
-  --location "Surry Hills, NSW" \
-  --discover-agencies \
-  --limit 5
-```
-
-**Skip enrichment (faster):**
-```bash
-pnpm pipeline:run \
-  --location "Newtown, NSW" \
-  --agencies "Belle Property" \
-  --no-sales \
-  --no-reviews
-```
-
-**Dry run (no DB writes):**
-```bash
-pnpm pipeline:run \
-  --location "Paddington, NSW" \
-  --discover-agencies \
-  --dry-run
-```
-
-### All Options
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--location` | `-l` | Target location (required) | — |
-| `--agencies` | `-a` | Comma-separated agency names | — |
-| `--discover-agencies` | — | Auto-discover agencies | `false` |
-| `--limit` | — | Max agencies to process | `10` |
-| `--no-sales` | — | Skip sales enrichment | (sales enabled) |
-| `--no-reviews` | — | Skip reviews enrichment | (reviews enabled) |
-| `--dry-run` | — | Validate without saving | `false` |
-| `--help` | `-h` | Show help | — |
-
----
-
-## Progress Feedback
-
-The pipeline provides real-time CLI output as it runs:
-
-### Output Format
-
-```
-========================================
-AgentIndex Data Pipeline
-========================================
-
-Location: Bondi Beach, NSW
-Dry run: false
-Enrich sales: true
-Enrich reviews: true
-
-Pipeline run ID: 42
-
-🔍 Discovering agencies in Bondi Beach, NSW...
-Found 5 agencies
-
-Processing 5 agencies...
-
-📍 Researching: Ray White Bondi Beach
-  Agency: Ray White Bondi Beach (id=1)
-    Created agent: John Smith (id=1)
-    Created agent: Jane Doe (id=2)
-  Found 3 agents, 12 sales, 8 reviews
-
-📍 Researching: McGrath Estate Agents
-  Agency: McGrath Estate Agents (id=2)
-    Updated agent: Bob Wilson (id=3)
-  Found 2 agents, 5 sales, 3 reviews
-
-========================================
-Pipeline Complete
-========================================
-Agencies: 5
-Agents: 12
-Sales: 45
-Reviews: 28
-```
-
-### Progress Indicators
-
-- `🔍` — Discovery/search phase
-- `📍` — Processing an agency
-- `✓` — Success
-- `✗` — Error (with message)
-
-### Pipeline Run Tracking
-
-Each run creates a record in `pipeline_runs` table:
-
-```sql
-SELECT * FROM pipeline_runs WHERE id = 42;
-```
-
-Fields tracked:
-- `status` — running, success, partial_success, failed
-- `target_location` — input location
-- `started_at`, `completed_at` — timestamps
-- `agencies_found`, `agents_found` — counts
-- `sales_found`, `reviews_found` — enrichment counts
-- `error_log` — JSON array of errors
 
 ---
 
 ## Data Flow
 
-### Stage 1: Input
+### Phase 1: Check Existing
 
 ```
-CLI Arguments
+Request: { suburbId, agencyName, limit }
     ↓
-parseArgs() → CLIArgs object
+getSuburbById(suburbId) → Suburb info
     ↓
-Validate location is provided
+getAgentsByAgencyName(agencyName) → Existing agents
+    ↓
+If existing.length >= limit → Complete (no work needed)
 ```
 
-### Stage 2: Discovery
+### Phase 2: Agency Discovery
 
 ```
---discover-agencies flag set?
+Agency not in DB?
     ↓
-discoverAgencies(location, limit)
-    ↓
-query() with WebSearch → agency names[]
-    ↓
-OR use --agencies list directly
-```
-
-### Stage 3: Agency Research
-
-For each agency:
-
-```
-buildAgencyResearchPrompt(agencyName, location)
+buildAgencyDiscoveryPrompt(agencyName, suburb, state)
     ↓
 query() with WebSearch + WebFetch
     ↓
-Extract JSON from response
-    ↓
-AgencyOutputSchema.safeParse()
-    ↓
-AgencyOutput { name, address, agents[] }
+Parse JSON → Store agency in DB
 ```
 
-### Stage 4: Agent Enrichment
-
-For each agent in agency (if enabled):
+### Phase 3: Team Discovery
 
 ```
-buildSalesResearchPrompt(agentName, agency)
-    ↓                                ↓
-query() → SaleOutput[]    query() → ReviewOutput[]
-           (parallel)
+buildTeamDiscoveryPrompt(websiteUrl)
+    ↓
+query() with WebFetch
+    ↓
+Parse JSON array → List of agent stubs
+    ↓
+Filter out existing agents
 ```
 
-### Stage 5: Storage
+### Phase 4: Parallel Enrichment
 
 ```
-AgencyOutput
+chunkArray(newAgents, 2) → Pairs
     ↓
-generateSlug() → agency-name-suburb
+Promise.all(pairs.map(runSubAgent))
     ↓
-db.insert(agencies) or db.update(agencies)
+Each sub-agent:
+    buildAgentEnrichmentPrompt(agent1, agent2, agency, location)
     ↓
-For each AgentOutput:
+    query() with WebSearch + WebFetch
     ↓
-    calculateAgentQualityScore()
-    ↓
-    db.insert(agents) or db.update(agents)
-    ↓
-    linkAgentToSuburbs()
-    ↓
-    For each sale: db.insert(sales)
-    For each review: db.insert(reviews)
+    Parse JSON → Store agents, sales, reviews
 ```
 
-### Stage 6: Completion
+### Error Handling
 
-```
-Update pipeline_runs record
-    ↓
-Print summary stats
-```
-
-### Database Tables Affected
-
-| Table | Operation |
-|-------|-----------|
-| `agencies` | Upsert by slug |
-| `agents` | Upsert by slug |
-| `agent_suburbs` | Replace links |
-| `sales` | Insert (skip duplicates) |
-| `reviews` | Insert |
-| `pipeline_runs` | Track run |
+- **Sub-agent failure:** Mark as failed, NO retry
+- **Agency not found:** Stop pipeline, broadcast error
+- **Partial data:** Store what was found, continue
 
 ---
 
-## Configuration Options
+## Configuration
 
 ### Environment Variables
 
-The pipeline uses Claude Code Max subscription, so no API key is needed. However, you can configure:
+```bash
+# Admin authentication
+ADMIN_USER=admin
+ADMIN_PASS=changeme
 
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | Optional: use API key instead of subscription |
-| `DATABASE_URL` | Override database path (default: `data/agentindex.db`) |
+# Database (default: file:./data/agentindex.db)
+DATABASE_URL=file:./data/agentindex.db
 
-### Pipeline Budgets
+# ElevenLabs (for voice features, not pipeline)
+ELEVENLABS_API_KEY=
+ELEVENLABS_AGENT_ID=
+```
 
-Set in `pipeline/scripts/pipeline.ts`:
+### SDK Budgets
+
+Set in orchestrator:
 
 ```typescript
 options: {
-  maxTurns: 10,        // Max agent iterations
-  maxBudgetUsd: 0.50,  // Cost cap per query
+  allowedTools: ['WebSearch', 'WebFetch'],
+  maxTurns: 15,       // Max agent iterations
+  maxBudgetUsd: 1.0,  // Cost cap per sub-agent
 }
 ```
 
-### Schema Customization
-
-Modify Zod schemas in `pipeline/schemas/index.ts` to adjust:
-- Required vs optional fields
-- Enum values (property types, review sources)
-- Validation rules
-
 ### Quality Scoring
 
-Agent quality score (0-100) is calculated in `calculateAgentQualityScore()`:
+Agent quality score (0-100):
 
-| Field | Weight |
+| Field | Points |
 |-------|--------|
 | Photo URL | 10 |
 | Bio (>100 chars) | 15 |
 | Phone or email | 15 |
-| Active license | 20 |
 | Years experience | 10 |
 | Specializations | 10 |
 | Has sales | 10 |
 | Has reviews | 10 |
+| Suburbs served | 20 |
+
+---
+
+## API Endpoints
+
+### POST /api/pipeline/start
+
+Start a new pipeline run.
+
+**Request:**
+```json
+{
+  "suburbId": 123,
+  "agencyName": "Ray White Bondi Beach",
+  "limit": 50
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Pipeline started",
+  "suburb": "Bondi Beach",
+  "state": "NSW"
+}
+```
+
+### GET /api/pipeline/stream
+
+SSE stream for real-time events.
+
+**Event format:**
+```
+data: {"id":1,"timestamp":1234567890,"type":"info","message":"Starting pipeline..."}
+
+data: {"id":2,"timestamp":1234567891,"type":"phase","phase":1,"message":"Discovering agency..."}
+```
+
+### GET /api/suburbs
+
+Get all suburbs for dropdown.
+
+**Response:**
+```json
+{
+  "suburbs": [
+    { "id": 1, "name": "Bondi Beach", "state": "NSW" },
+    { "id": 2, "name": "Surry Hills", "state": "NSW" }
+  ]
+}
+```
 
 ---
 

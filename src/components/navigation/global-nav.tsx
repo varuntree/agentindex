@@ -21,7 +21,7 @@ export function GlobalNav() {
 
   const handleVoiceClick = () => {
     if (status === 'idle') {
-      startSession();
+      startSession('navigator');
     }
   };
 

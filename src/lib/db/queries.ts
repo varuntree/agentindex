@@ -1285,6 +1285,155 @@ export async function getNotableSalesInSuburb(
 }
 
 // ===========================================================================
+// Pipeline queries
+// ===========================================================================
+
+/**
+ * Get all agents belonging to an agency by agency name
+ */
+export function getAgentsByAgencyName(agencyName: string): Agent[] {
+  return sqliteDb
+    .prepare(
+      `SELECT a.* FROM agents a
+       INNER JOIN agencies ag ON a.agency_id = ag.id
+       WHERE LOWER(ag.name) = LOWER(?)`
+    )
+    .all(agencyName) as Agent[];
+}
+
+/**
+ * Get agency by exact name match
+ */
+export function getAgencyByName(name: string): Agency | null {
+  const result = sqliteDb
+    .prepare(`SELECT * FROM agencies WHERE LOWER(name) = LOWER(?) LIMIT 1`)
+    .get(name) as Agency | undefined;
+  return result ?? null;
+}
+
+/**
+ * Get all suburbs for dropdown (name, state, id)
+ */
+export function getSuburbsDropdown(): { id: number; name: string; state: string }[] {
+  return sqliteDb
+    .prepare(`SELECT id, name, state FROM suburbs ORDER BY state, name`)
+    .all() as { id: number; name: string; state: string }[];
+}
+
+/**
+ * Get suburb by ID
+ */
+export function getSuburbById(id: number): Suburb | null {
+  const result = sqliteDb
+    .prepare(`SELECT * FROM suburbs WHERE id = ?`)
+    .get(id) as Suburb | undefined;
+  return result ?? null;
+}
+
+/**
+ * Search suburbs for admin dropdown/typeahead.
+ * Returns top matches by prefix, then alphabetical.
+ */
+export function searchSuburbs(
+  query: string,
+  limit = 10
+): { id: number; name: string; state: string; postcode: string }[] {
+  const q = query.trim();
+  if (!q) return [];
+
+  const like = `%${q.toLowerCase()}%`;
+  const prefix = `${q.toLowerCase()}%`;
+
+  return sqliteDb
+    .prepare(
+      `SELECT id, name, state, postcode
+       FROM suburbs
+       WHERE LOWER(name) LIKE ? OR LOWER(postcode) LIKE ?
+       ORDER BY
+         CASE WHEN LOWER(name) LIKE ? THEN 0 ELSE 1 END,
+         name ASC
+       LIMIT ?`
+    )
+    .all(like, like, prefix, Math.min(Math.max(limit, 1), 20)) as {
+    id: number;
+    name: string;
+    state: string;
+    postcode: string;
+  }[];
+}
+
+const AU_STATES = new Set(['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT']);
+
+export function resolveSuburbFromLocation(location: string): { id: number; name: string; state: string; postcode: string } | null {
+  const raw = location.trim();
+  if (!raw) return null;
+
+  const postcodeMatch = raw.match(/\b(\d{4})\b/);
+  const postcode = postcodeMatch ? postcodeMatch[1] : null;
+
+  const stateMatch = raw.toUpperCase().match(/\b(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\b/);
+  const state = stateMatch ? stateMatch[1] : null;
+
+  const suburbPart = raw.split(',')[0] ?? raw;
+  const suburbName = suburbPart
+    .replace(/\b(\d{4})\b/g, '')
+    .replace(/\b(NSW|VIC|QLD|WA|SA|TAS|NT|ACT)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Try exact match first (fast + accurate)
+  if (suburbName) {
+    if (state && AU_STATES.has(state) && postcode) {
+      const exact = sqliteDb
+        .prepare(
+          `SELECT id, name, state, postcode
+           FROM suburbs
+           WHERE LOWER(name) = LOWER(?)
+             AND state = ?
+             AND postcode = ?
+           LIMIT 1`
+        )
+        .get(suburbName, state, postcode) as { id: number; name: string; state: string; postcode: string } | undefined;
+      if (exact) return exact;
+    }
+
+    if (state && AU_STATES.has(state)) {
+      const exact = sqliteDb
+        .prepare(
+          `SELECT id, name, state, postcode
+           FROM suburbs
+           WHERE LOWER(name) = LOWER(?)
+             AND state = ?
+           LIMIT 1`
+        )
+        .get(suburbName, state) as { id: number; name: string; state: string; postcode: string } | undefined;
+      if (exact) return exact;
+    }
+
+    const exact = sqliteDb
+      .prepare(
+        `SELECT id, name, state, postcode
+         FROM suburbs
+         WHERE LOWER(name) = LOWER(?)
+         LIMIT 1`
+      )
+      .get(suburbName) as { id: number; name: string; state: string; postcode: string } | undefined;
+    if (exact) return exact;
+  }
+
+  // Fallback: use search
+  const candidates = searchSuburbs(suburbName || raw, 10);
+  if (candidates.length === 0) return null;
+
+  const best =
+    candidates.find((c) => (state ? c.state === state : true) && (postcode ? c.postcode === postcode : true)) ??
+    candidates.find((c) => (state ? c.state === state : true)) ??
+    candidates[0];
+
+  return best ?? null;
+}
+
+// ===========================================================================
 // Helpers
 // ===========================================================================
 

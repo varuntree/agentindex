@@ -25,7 +25,10 @@ export {
 } from './prompts';
 
 // Client tools
-export { navigatorTools, assistantTools, type ClientToolsMap } from './tools';
+export { navigatorTools, assistantTools, allTools, type ClientTools } from './tools';
+
+// ElevenLabs helpers
+export { createSignedUrl, isElevenLabsConfigured, type ElevenLabsOverrides } from './elevenlabs';
 
 // Tracking
 export { logVoiceSessionStart, logVoiceSessionEnd } from './tracking';

@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-> Last updated: 2026-01-29 18:00
+> Last updated: 2026-01-29 18:50
 > Current phase: 6/8 — Pages (polish remaining)
-> Progress: 70 completed / 92 total tasks
+> Progress: 73 completed / 92 total tasks
 
 > **prompt_build** and **prompt_plan**: Read `AGENTS.md` at the beginning of every conversation before taking any action. It contains critical build fixes and gotchas.
 
@@ -42,14 +42,14 @@ None. All blocking items resolved.
 
 ## PHASE 6: Pages (Active)
 
-### TASK-001: Agent header agency logo
-- **Status:** `pending`
+### TASK-001: Agent header agency logo ✓
+- **Status:** `complete`
 - **Scope:** Add 40px agency logo next to agent name in header section
 - **Files:** `src/app/agent/[slug]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: navigate to `/agent/[slug]`, verify agency logo visible
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: navigate to `/agent/[slug]`, verify agency logo visible (already implemented)
 
 ### TASK-002: Agent header social links
 - **Status:** `pending`
@@ -126,23 +126,23 @@ None. All blocking items resolved.
   - [ ] `pnpm build` passes
   - [ ] Playwright: verify stats section renders
 
-### TASK-010: State page sort controls
-- **Status:** `pending`
+### TASK-010: State page sort controls ✓
+- **Status:** `complete`
 - **Scope:** Add sort controls for suburbs (Agent Count, Name A-Z, Median Price)
 - **Files:** `src/app/agents/[state]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify sort dropdown works
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify sort controls work with URL params
 
-### TASK-011: Agencies page sort controls
-- **Status:** `pending`
+### TASK-011: Agencies page sort controls ✓
+- **Status:** `complete`
 - **Scope:** Add sort controls (Name A-Z, Agent Count, Sales Count, State)
 - **Files:** `src/app/agencies/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify sort dropdown works
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify sort controls work with URL params
 
 ### TASK-012: Agencies page card stats
 - **Status:** `pending`

@@ -59,15 +59,23 @@ export async function generateMetadata({
   };
 }
 
+type SortOption = "agents" | "name" | "median_price";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "agents", label: "Most Agents" },
+  { value: "name", label: "Name A-Z" },
+  { value: "median_price", label: "Median Price" },
+];
+
 export default async function StatePage({
   params,
   searchParams,
 }: {
   params: Promise<{ state: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
   const { state } = await params;
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, sort: sortParam } = await searchParams;
 
   if (!VALID_STATES.includes(state)) {
     notFound();
@@ -75,11 +83,12 @@ export default async function StatePage({
 
   const fullName = STATES[state];
   const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const currentSort = (sortParam as SortOption) || "agents";
   const limit = 48;
 
   const [stats, { suburbs, total }] = await Promise.all([
     getStateStats(state),
-    getSuburbsList({ state, sort: "agents", page: currentPage, limit }),
+    getSuburbsList({ state, sort: currentSort, page: currentPage, limit }),
   ]);
 
   const totalPages = Math.ceil(total / limit);
@@ -117,8 +126,28 @@ export default async function StatePage({
 
       <SearchBar
         placeholder={`Search agents in ${fullName}...`}
-        className="max-w-xl mb-8"
+        className="max-w-xl mb-6"
       />
+
+      {/* Sort Controls (6.5.1) */}
+      <div className="flex items-center gap-2 mb-6">
+        <span className="text-sm text-gray-500">Sort by:</span>
+        <div className="flex gap-1">
+          {SORT_OPTIONS.map((opt) => (
+            <Link
+              key={opt.value}
+              href={`/agents/${state}?sort=${opt.value}`}
+              className={`px-3 py-1 text-sm rounded-full border-2 transition-colors ${
+                currentSort === opt.value
+                  ? "bg-voqo-green text-white border-voqo-green"
+                  : "border-gray-300 hover:border-black"
+              }`}
+            >
+              {opt.label}
+            </Link>
+          ))}
+        </div>
+      </div>
 
       {suburbs.length === 0 ? (
         <p className="text-gray-500 py-12 text-center">
@@ -164,7 +193,7 @@ export default async function StatePage({
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                basePath={`/agents/${state}`}
+                basePath={`/agents/${state}?sort=${currentSort}`}
               />
             </div>
           )}

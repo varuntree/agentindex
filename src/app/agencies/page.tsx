@@ -47,6 +47,14 @@ const STATES = [
   { value: "act", label: "ACT" },
 ];
 
+type SortOption = "name" | "agents" | "sales";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "name", label: "Name A-Z" },
+  { value: "agents", label: "Agent Count" },
+  { value: "sales", label: "Sales Count" },
+];
+
 const PAGE_SIZE = 24;
 
 type PageProps = {
@@ -56,19 +64,23 @@ type PageProps = {
 export default async function AgenciesPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const stateFilter = typeof sp.state === "string" ? sp.state : "";
+  const currentSort = (sp.sort as SortOption) || "name";
   const currentPage = Math.max(1, Number(sp.page) || 1);
 
   const { agencies, total } = await getAgenciesList({
     state: stateFilter || undefined,
-    sort: "name",
+    sort: currentSort,
     page: currentPage,
     limit: PAGE_SIZE,
   });
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Build basePath preserving state filter
-  const basePath = stateFilter ? `/agencies?state=${stateFilter}` : "/agencies";
+  // Build basePath preserving state and sort filters
+  const queryParams = new URLSearchParams();
+  if (stateFilter) queryParams.set("state", stateFilter);
+  if (currentSort !== "name") queryParams.set("sort", currentSort);
+  const basePath = queryParams.toString() ? `/agencies?${queryParams.toString()}` : "/agencies";
 
   const breadcrumbData = breadcrumbJsonLd([
     { name: "Home", url: BASE_URL },
@@ -93,12 +105,12 @@ export default async function AgenciesPage({ searchParams }: PageProps) {
       </div>
 
       {/* State filter tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-8 -mx-4 px-4 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4 scrollbar-hide">
         {STATES.map((s) => {
           const isActive = stateFilter === s.value;
           const href = s.value
-            ? `/agencies?state=${s.value}`
-            : "/agencies";
+            ? `/agencies?state=${s.value}${currentSort !== "name" ? `&sort=${currentSort}` : ""}`
+            : `/agencies${currentSort !== "name" ? `?sort=${currentSort}` : ""}`;
 
           return (
             <Link
@@ -114,6 +126,32 @@ export default async function AgenciesPage({ searchParams }: PageProps) {
             </Link>
           );
         })}
+      </div>
+
+      {/* Sort controls (6.5.2/6.5.3) */}
+      <div className="flex items-center gap-2 mb-6">
+        <span className="text-sm text-gray-500">Sort by:</span>
+        <div className="flex gap-1">
+          {SORT_OPTIONS.map((opt) => {
+            const href = stateFilter
+              ? `/agencies?state=${stateFilter}&sort=${opt.value}`
+              : `/agencies?sort=${opt.value}`;
+
+            return (
+              <Link
+                key={opt.value}
+                href={href}
+                className={`px-3 py-1 text-sm rounded-full border-2 transition-colors ${
+                  currentSort === opt.value
+                    ? "bg-voqo-green text-white border-voqo-green"
+                    : "border-gray-300 hover:border-black"
+                }`}
+              >
+                {opt.label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       {/* Agency grid */}

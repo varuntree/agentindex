@@ -1,105 +1,20 @@
 import Link from 'next/link';
+import { getTopSuburbs } from '@/lib/db/queries';
 
-interface SuburbLink {
+interface StateConfig {
   name: string;
   slug: string;
 }
 
-interface StateData {
-  name: string;
-  slug: string;
-  suburbs: SuburbLink[];
-}
-
-const states: StateData[] = [
-  {
-    name: 'NSW',
-    slug: 'nsw',
-    suburbs: [
-      { name: 'Bondi Beach', slug: 'bondi-beach' },
-      { name: 'Surry Hills', slug: 'surry-hills' },
-      { name: 'Manly', slug: 'manly' },
-      { name: 'Parramatta', slug: 'parramatta' },
-      { name: 'Newtown', slug: 'newtown' },
-    ],
-  },
-  {
-    name: 'VIC',
-    slug: 'vic',
-    suburbs: [
-      { name: 'South Yarra', slug: 'south-yarra' },
-      { name: 'Richmond', slug: 'richmond' },
-      { name: 'St Kilda', slug: 'st-kilda' },
-      { name: 'Brighton', slug: 'brighton' },
-      { name: 'Fitzroy', slug: 'fitzroy' },
-    ],
-  },
-  {
-    name: 'QLD',
-    slug: 'qld',
-    suburbs: [
-      { name: 'Surfers Paradise', slug: 'surfers-paradise' },
-      { name: 'Noosa Heads', slug: 'noosa-heads' },
-      { name: 'Paddington', slug: 'paddington' },
-      { name: 'New Farm', slug: 'new-farm' },
-      { name: 'Broadbeach', slug: 'broadbeach' },
-    ],
-  },
-  {
-    name: 'WA',
-    slug: 'wa',
-    suburbs: [
-      { name: 'Fremantle', slug: 'fremantle' },
-      { name: 'Subiaco', slug: 'subiaco' },
-      { name: 'Cottesloe', slug: 'cottesloe' },
-      { name: 'Scarborough', slug: 'scarborough' },
-      { name: 'Joondalup', slug: 'joondalup' },
-    ],
-  },
-  {
-    name: 'SA',
-    slug: 'sa',
-    suburbs: [
-      { name: 'Glenelg', slug: 'glenelg' },
-      { name: 'North Adelaide', slug: 'north-adelaide' },
-      { name: 'Norwood', slug: 'norwood' },
-      { name: 'Unley', slug: 'unley' },
-      { name: 'Prospect', slug: 'prospect' },
-    ],
-  },
-  {
-    name: 'TAS',
-    slug: 'tas',
-    suburbs: [
-      { name: 'Battery Point', slug: 'battery-point' },
-      { name: 'Sandy Bay', slug: 'sandy-bay' },
-      { name: 'Launceston', slug: 'launceston' },
-      { name: 'Kingston', slug: 'kingston' },
-      { name: 'Devonport', slug: 'devonport' },
-    ],
-  },
-  {
-    name: 'NT',
-    slug: 'nt',
-    suburbs: [
-      { name: 'Darwin City', slug: 'darwin-city' },
-      { name: 'Stuart Park', slug: 'stuart-park' },
-      { name: 'Parap', slug: 'parap' },
-      { name: 'Nightcliff', slug: 'nightcliff' },
-      { name: 'Alice Springs', slug: 'alice-springs' },
-    ],
-  },
-  {
-    name: 'ACT',
-    slug: 'act',
-    suburbs: [
-      { name: 'Braddon', slug: 'braddon' },
-      { name: 'Kingston', slug: 'kingston' },
-      { name: 'Manuka', slug: 'manuka' },
-      { name: 'Woden', slug: 'woden' },
-      { name: 'Belconnen', slug: 'belconnen' },
-    ],
-  },
+const stateConfigs: StateConfig[] = [
+  { name: 'NSW', slug: 'nsw' },
+  { name: 'VIC', slug: 'vic' },
+  { name: 'QLD', slug: 'qld' },
+  { name: 'WA', slug: 'wa' },
+  { name: 'SA', slug: 'sa' },
+  { name: 'TAS', slug: 'tas' },
+  { name: 'NT', slug: 'nt' },
+  { name: 'ACT', slug: 'act' },
 ];
 
 const legalLinks = [
@@ -108,13 +23,24 @@ const legalLinks = [
   { label: 'Contact', href: 'mailto:hello@agentindex.com.au' },
 ];
 
-export function GlobalFooter() {
+export async function GlobalFooter() {
+  // Fetch top 5 suburbs per state from database
+  const statesWithSuburbs = await Promise.all(
+    stateConfigs.map(async (state) => {
+      const suburbs = await getTopSuburbs(state.slug.toUpperCase(), 5);
+      return {
+        ...state,
+        suburbs: suburbs.map((s) => ({ name: s.name, slug: s.slug })),
+      };
+    })
+  );
+
   return (
     <footer className="bg-gray-900 text-white py-12">
       <div className="max-w-7xl mx-auto px-4">
         {/* State / suburb links grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {states.map((state) => (
+          {statesWithSuburbs.map((state) => (
             <div key={state.slug}>
               <h3 className="font-heading font-bold text-lg mb-3">
                 {state.name}

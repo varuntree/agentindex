@@ -134,7 +134,7 @@ None. All blocking items resolved.
 - [x] **5.1** — GlobalNav: Add Voice Navigator button ("Ask Navigator")
 - [x] **5.10** — GlobalFooter: Add About section with tagline + description (50 words)
 - [x] **5.11** — GlobalFooter: Add Contact link to legal section
-- [ ] **5.4** — GlobalFooter: Make suburb links dynamic from DB (currently hardcoded)
+- [x] **5.4** — GlobalFooter: Make suburb links dynamic from DB (currently hardcoded)
 - [x] **5.13** — ~~GlobalNav: Add Suburbs/About links~~ → Keep current nav (decision made)
 
 **Playwright verify:** Screenshot nav, verify voice button + all links. Screenshot footer, verify About section.

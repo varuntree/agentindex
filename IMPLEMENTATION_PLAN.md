@@ -103,7 +103,7 @@ None. All blocking items resolved.
 - [ ] **6.3.5** — Add Suburb Stats section: market overview text paragraph (150 words)
 - [ ] **6.3.6** — Add Suburb Stats section: median price by property type table (Houses/Apartments/Townhouses/Land)
 - [ ] **6.3.7** — Add Suburb Stats section: 3 notable recent sales with cards
-- [ ] **6.3.8** — Header: Add agent count subtitle ("X real estate agents" below h1)
+- [x] **6.3.8** — Header: Add agent count subtitle ("X real estate agents" below h1)
 
 **Playwright verify:** Navigate to `/agents/nsw/bondi-beach-nsw`, screenshot, verify stats section present.
 

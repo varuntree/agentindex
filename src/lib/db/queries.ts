@@ -134,6 +134,11 @@ export async function getAgentComputedStats(agentId: number): Promise<AgentCompu
   };
 }
 
+export type AgentWithSuburbStats = Agent & {
+  sales_count_suburb?: number;
+  avg_sale_price_suburb?: number | null;
+};
+
 export async function getAgentsList(filters: {
   suburb?: string;
   agency?: string;
@@ -142,12 +147,17 @@ export async function getAgentsList(filters: {
   sort?: "sales_count" | "avg_price" | "name";
   page?: number;
   limit?: number;
-}): Promise<{ agents: Agent[]; total: number }> {
+}): Promise<{ agents: AgentWithSuburbStats[]; total: number }> {
   const pageSize = Math.min(filters.limit ?? 20, 50);
   const page = filters.page ?? 1;
   const offset = (page - 1) * pageSize;
 
-  // Build WHERE clauses
+  // When filtering by suburb, use a JOIN to get per-suburb stats
+  if (filters.suburb) {
+    return getAgentsListWithSuburbStats(filters.suburb, filters, pageSize, offset);
+  }
+
+  // Build WHERE clauses for non-suburb queries
   const whereClauses: string[] = ["1=1"];
   const params: (string | number)[] = [];
 
@@ -159,11 +169,6 @@ export async function getAgentsList(filters: {
   if (filters.agency) {
     whereClauses.push("EXISTS (SELECT 1 FROM agencies ag WHERE ag.id = a.agency_id AND ag.slug = ?)");
     params.push(filters.agency);
-  }
-
-  if (filters.suburb) {
-    whereClauses.push("EXISTS (SELECT 1 FROM agent_suburbs asub JOIN suburbs s ON s.id = asub.suburb_id WHERE asub.agent_id = a.id AND s.slug = ?)");
-    params.push(filters.suburb);
   }
 
   if (filters.propertyType) {
@@ -199,6 +204,82 @@ export async function getAgentsList(filters: {
   // Get total count
   const countResult = sqliteDb
     .prepare(`SELECT COUNT(*) as cnt FROM agents a WHERE ${whereClause}`)
+    .get(...params) as { cnt: number };
+
+  return {
+    agents: rows,
+    total: countResult?.cnt ?? 0,
+  };
+}
+
+// Helper for suburb-filtered queries with per-suburb stats
+function getAgentsListWithSuburbStats(
+  suburbSlug: string,
+  filters: {
+    state?: string;
+    agency?: string;
+    propertyType?: string;
+    sort?: "sales_count" | "avg_price" | "name";
+  },
+  pageSize: number,
+  offset: number
+): { agents: AgentWithSuburbStats[]; total: number } {
+  const whereClauses: string[] = ["s.slug = ?"];
+  const params: (string | number)[] = [suburbSlug];
+
+  if (filters.state) {
+    whereClauses.push("a.license_state = ?");
+    params.push(filters.state);
+  }
+
+  if (filters.agency) {
+    whereClauses.push("EXISTS (SELECT 1 FROM agencies ag WHERE ag.id = a.agency_id AND ag.slug = ?)");
+    params.push(filters.agency);
+  }
+
+  if (filters.propertyType) {
+    whereClauses.push("EXISTS (SELECT 1 FROM sales sa WHERE sa.agent_id = a.id AND sa.property_type = ?)");
+    params.push(filters.propertyType);
+  }
+
+  const whereClause = whereClauses.join(" AND ");
+
+  // Determine ORDER BY - use suburb-specific stats when sorting by sales_count
+  let orderBy: string;
+  switch (filters.sort) {
+    case "sales_count":
+      orderBy = "asub.sales_count DESC NULLS LAST, a.total_sales_count DESC NULLS LAST";
+      break;
+    case "avg_price":
+      orderBy = "a.median_sale_price DESC NULLS LAST";
+      break;
+    case "name":
+      orderBy = "a.full_name ASC";
+      break;
+    default:
+      orderBy = "asub.sales_count DESC NULLS LAST, a.total_sales_count DESC NULLS LAST";
+  }
+
+  const rows = sqliteDb
+    .prepare(
+      `SELECT a.*, asub.sales_count as sales_count_suburb, a.median_sale_price as avg_sale_price_suburb
+       FROM agents a
+       INNER JOIN agent_suburbs asub ON a.id = asub.agent_id
+       INNER JOIN suburbs s ON s.id = asub.suburb_id
+       WHERE ${whereClause}
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`
+    )
+    .all(...params, pageSize, offset) as (Agent & { sales_count_suburb: number; avg_sale_price_suburb: number | null })[];
+
+  const countResult = sqliteDb
+    .prepare(
+      `SELECT COUNT(*) as cnt
+       FROM agents a
+       INNER JOIN agent_suburbs asub ON a.id = asub.agent_id
+       INNER JOIN suburbs s ON s.id = asub.suburb_id
+       WHERE ${whereClause}`
+    )
     .get(...params) as { cnt: number };
 
   return {

@@ -109,13 +109,13 @@ None. All blocking items resolved.
 
 ### Agency Profile (`/agency/[slug]`)
 
-- [ ] **6.4.1** — Header: Display agency logo (currently missing, spec: 300x150px)
+- [x] **6.4.1** — Header: Display agency logo (currently missing, spec: 300x150px)
 - [x] **6.4.2** — Header: Add Voice Receptionist button ("Talk to [Agency] Reception")
 - [x] **6.4.3** — Header: Add Avg Sale Price stat (4th stat card)
 - [ ] **6.4.4** — Agent Roster: Add sort controls (Sales Count, Rating, Name)
-- [ ] **6.4.5** — Add Agency Stats section: performance grid + property type bar chart
-- [ ] **6.4.6** — Add Agency Stats section: Top 10 suburbs covered table
-- [ ] **6.4.7** — Recent Sales: Show individual property sales (not agent aggregates) with columns: property+image, agent, price, date, type
+- [x] **6.4.5** — Add Agency Stats section: performance grid + property type bar chart
+- [x] **6.4.6** — Add Agency Stats section: Top 10 suburbs covered table
+- [x] **6.4.7** — Recent Sales: Show individual property sales (not agent aggregates) with columns: property+image, agent, price, date, type
 
 **Playwright verify:** Navigate to `/agency/[slug]`, screenshot, verify logo + voice button + stats section.
 

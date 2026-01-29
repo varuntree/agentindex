@@ -26,3 +26,6 @@ export {
 
 // Client tools
 export { navigatorTools, assistantTools, type ClientToolsMap } from './tools';
+
+// Tracking
+export { logVoiceSessionStart, logVoiceSessionEnd } from './tracking';

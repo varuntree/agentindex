@@ -22,6 +22,13 @@
       "when": 1769649122117,
       "tag": "0002_black_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1769650111641,
+      "tag": "0003_chubby_flatman",
+      "breakpoints": true
     }
   ]
 }

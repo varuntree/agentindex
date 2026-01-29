@@ -254,7 +254,31 @@ export const reviews = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// 7. pipelineRuns
+// 7. voiceSessions
+// ---------------------------------------------------------------------------
+export const voiceSessions = sqliteTable(
+  "voice_sessions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sessionId: text("session_id").unique().notNull(),
+    pageType: text("page_type"), // home|agent|agency|suburb
+    voiceMode: text("voice_mode"), // navigator|assistant
+    entitySlug: text("entity_slug"),
+    durationMs: integer("duration_ms"),
+    status: text("status").notNull(), // started|completed|error|timeout
+    errorMessage: text("error_message"),
+    startedAt: integer("started_at").notNull(),
+    endedAt: integer("ended_at"),
+  },
+  (table) => [
+    index("voice_sessions_session_id_idx").on(table.sessionId),
+    index("voice_sessions_status_idx").on(table.status),
+    index("voice_sessions_started_at_idx").on(table.startedAt),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// 8. pipelineRuns
 // ---------------------------------------------------------------------------
 export const pipelineRuns = sqliteTable(
   "pipeline_runs",
@@ -364,6 +388,10 @@ export type NewReview = InferInsertModel<typeof reviews>;
 // --- PipelineRun ---
 export type PipelineRun = InferSelectModel<typeof pipelineRuns>;
 export type NewPipelineRun = InferInsertModel<typeof pipelineRuns>;
+
+// --- VoiceSession ---
+export type VoiceSession = InferSelectModel<typeof voiceSessions>;
+export type NewVoiceSession = InferInsertModel<typeof voiceSessions>;
 
 // ===========================================================================
 // Convenience composite types

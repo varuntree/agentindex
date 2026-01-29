@@ -299,8 +299,10 @@ async function fetchSuburbContext(slug?: string): Promise<SuburbVoiceContext | n
     name: suburb.name,
     state: suburb.state,
     postcode: suburb.postcode,
+    salesCount12mo: suburb.salesVolume12m ?? undefined,
     medianHousePrice12mo: suburb.medianHousePrice ?? undefined,
     medianApartmentPrice12mo: suburb.medianUnitPrice ?? undefined,
+    medianDom12mo: suburb.avgDaysOnMarket ?? undefined,
     topAgents,
   };
 }

@@ -306,13 +306,14 @@ None. All blocking items resolved.
   - [x] Help text displays
 - **Feedback:** Created 4 CLI scripts (validate, report, retry, dedupe). Adapted to actual schema (pipelineRuns uses completedAt, integer IDs, errorLog text).
 
-### TASK-027: License verification
-- **Status:** `pending`
+### TASK-027: License verification ✓
+- **Status:** `completed`
 - **Scope:** Add NSW Fair Trading license verification integration
 - **Files:** `pipeline/agents/license-verifier.ts`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] Test with known license number
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+- **Feedback:** Created LicenseOutputSchema, buildLicenseVerificationPrompt, parseLicenseResponse. Agent searches service.nsw.gov.au for license data.
 
 ### TASK-028: Domain rate limiter
 - **Status:** `pending`

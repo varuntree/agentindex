@@ -295,13 +295,16 @@ None. All blocking items resolved.
   - [x] Config file loads and validates
 - **Feedback:** Created Zod schema with full validation. Added --config flag to CLI. Config merges with CLI args (CLI overrides). Tracks explicit CLI args to avoid overwriting user intent.
 
-### TASK-026: Pipeline CLI utilities
-- **Status:** `pending`
+### TASK-026: Pipeline CLI utilities ✓
+- **Status:** `completed`
 - **Scope:** Add `pnpm pipeline:validate`, `pipeline:report`, `pipeline:retry`, `pipeline:dedupe` commands
 - **Files:** `pipeline/scripts/*.ts`, `package.json`
 - **Verification:**
-  - [ ] All commands run without error
-  - [ ] Help text displays
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] All commands run without error
+  - [x] Help text displays
+- **Feedback:** Created 4 CLI scripts (validate, report, retry, dedupe). Adapted to actual schema (pipelineRuns uses completedAt, integer IDs, errorLog text).
 
 ### TASK-027: License verification
 - **Status:** `pending`

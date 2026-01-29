@@ -14,6 +14,10 @@
     "db:studio": "drizzle-kit studio",
     "pipeline:suburbs": "tsx scripts/seed-suburbs.ts",
     "pipeline:run": "tsx pipeline/scripts/pipeline.ts",
+    "pipeline:validate": "tsx pipeline/scripts/validate.ts",
+    "pipeline:report": "tsx pipeline/scripts/report.ts",
+    "pipeline:retry": "tsx pipeline/scripts/retry.ts",
+    "pipeline:dedupe": "tsx pipeline/scripts/dedupe.ts",
     "pipeline:seed-sample": "tsx scripts/seed-sample-data.ts"
   },
   "dependencies": {

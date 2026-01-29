@@ -279,6 +279,45 @@ export async function getAgencyBySlug(
   return result as unknown as AgencyWithAgents;
 }
 
+export interface AgencyEnrichment {
+  avgSalePrice: number | null;
+  topSuburbs: { name: string; state: string; agentCount: number }[];
+}
+
+export async function getAgencyEnrichment(agencyId: number): Promise<AgencyEnrichment> {
+  // Calculate average sale price from all agents in agency
+  const priceResult = sqliteDb
+    .prepare(
+      `SELECT AVG(a.median_sale_price) as avg_price
+       FROM agents a
+       WHERE a.agency_id = ? AND a.median_sale_price IS NOT NULL`
+    )
+    .get(agencyId) as { avg_price: number | null } | undefined;
+
+  // Get top suburbs where agency agents operate
+  const topSuburbs = sqliteDb
+    .prepare(
+      `SELECT s.name, s.state, COUNT(DISTINCT a.id) as agent_count
+       FROM suburbs s
+       INNER JOIN agent_suburbs asub ON s.id = asub.suburb_id
+       INNER JOIN agents a ON a.id = asub.agent_id
+       WHERE a.agency_id = ?
+       GROUP BY s.id
+       ORDER BY agent_count DESC
+       LIMIT 10`
+    )
+    .all(agencyId) as { name: string; state: string; agent_count: number }[];
+
+  return {
+    avgSalePrice: priceResult?.avg_price ? Math.round(priceResult.avg_price) : null,
+    topSuburbs: topSuburbs.map((s) => ({
+      name: s.name,
+      state: s.state,
+      agentCount: s.agent_count,
+    })),
+  };
+}
+
 export async function getAgenciesList(filters: {
   state?: string;
   sort?: "name" | "agents" | "sales";

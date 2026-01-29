@@ -16,7 +16,7 @@
  */
 
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import { z } from 'zod';
+import { z, toJSONSchema } from 'zod';
 import { eq, sql } from 'drizzle-orm';
 import { db, type DbClient } from '../../src/lib/db';
 import {
@@ -416,8 +416,12 @@ async function runQueryWithRetry<T>(
   let lastError = '';
 
   // Convert Zod schema to JSON schema for SDK structured output
-  // Using type assertion since z.toJSONSchema may not be in types yet
-  const jsonSchema = (z as { toJSONSchema?: (s: z.ZodSchema<T>) => object }).toJSONSchema?.(schema);
+  let jsonSchema: Record<string, unknown> | null = null;
+  try {
+    jsonSchema = toJSONSchema(schema) as Record<string, unknown>;
+  } catch (err) {
+    log('warn', context, `Failed to convert schema to JSON: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
     try {
@@ -484,11 +488,12 @@ async function runQueryWithRetry<T>(
         }
       }
 
-      // Validate output
+      // Validate output - prioritize structured_output from SDK
       let dataToValidate = structuredOutput;
-      
+
       if (!dataToValidate && resultText) {
-        // Try multiple JSON extraction strategies
+        // Fallback: extract JSON from text response (less reliable)
+        log('debug', context, 'No structured_output, falling back to JSON extraction');
         dataToValidate = extractJSON(resultText);
       }
 

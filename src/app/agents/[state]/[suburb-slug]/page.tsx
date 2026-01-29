@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Home, Building2, Users, MapPin, Clock, TrendingUp, BarChart3 } from "lucide-react";
+import { Home, Building2, Users, MapPin, Clock, TrendingUp, BarChart3, Bed, Bath, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -13,8 +13,10 @@ import {
   getSuburbMarketStats,
   getAgentsList,
   getNearbySuburbs,
+  getSuburbPricesByType,
+  getNotableSalesInSuburb,
 } from "@/lib/db/queries";
-import { formatNumber, formatCurrency } from "@/lib/utils/format";
+import { formatNumber, formatCurrency, formatDate } from "@/lib/utils/format";
 import { breadcrumbJsonLd, suburbJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
 import { suburbMetadata } from "@/lib/seo/metadata";
 import { VoiceContextSetterWrapper } from "@/components/voice/VoiceContextSetterWrapper";
@@ -106,7 +108,7 @@ export default async function SuburbPage({
   const sort = (sortParam as "sales_count" | "avg_price" | "name") ?? "sales_count";
   const limit = 20;
 
-  const [suburbStats, { agents, total }] = await Promise.all([
+  const [suburbStats, { agents, total }, pricesByType, notableSales] = await Promise.all([
     getSuburbMarketStats(suburbSlug),
     getAgentsList({
       suburb: suburbSlug,
@@ -117,6 +119,8 @@ export default async function SuburbPage({
         ? propertyType[0]
         : propertyType,
     }),
+    getSuburbPricesByType(suburb.name),
+    getNotableSalesInSuburb(suburb.name),
   ]);
 
   const { marketStats, totalAgents: agentCountFromStats } = suburbStats;
@@ -264,6 +268,129 @@ export default async function SuburbPage({
           label="Clearance Rate"
         />
       </div>
+
+      {/* Suburb Stats Section (6.3.5, 6.3.6, 6.3.7) */}
+      <section className="mb-10 border-2 border-black rounded-lg bg-white p-6">
+        <h2 className="font-heading text-xl font-bold mb-4">
+          Market Overview
+        </h2>
+
+        {/* 6.3.5 - Market overview paragraph */}
+        <p className="text-gray-700 mb-6 leading-relaxed">
+          {suburb.name} is a {marketStats.medianPriceHouse && marketStats.medianPriceHouse > 1500000 ? "prestigious" : "popular"} suburb in {suburb.localGovernmentArea || fullStateName}, {state.toUpperCase()}.
+          {marketStats.medianPrice || marketStats.medianPriceHouse ? (
+            <> The median sale price of {formatCurrency(marketStats.medianPrice || marketStats.medianPriceHouse || 0)} represents a {marketStats.priceChangeYoy !== null && marketStats.priceChangeYoy !== undefined ? (
+              <>{Math.abs(marketStats.priceChangeYoy).toFixed(1)}% {marketStats.priceChangeYoy >= 0 ? "increase" : "decrease"}</>
+            ) : "stable trend"} over the past year.</>
+          ) : null}
+          {marketStats.avgDaysOnMarket ? (
+            <> Properties spend an average of {Math.round(marketStats.avgDaysOnMarket)} days on market.</>
+          ) : null}
+          {marketStats.salesVolume12m ? (
+            <> With {formatNumber(marketStats.salesVolume12m)} sales recorded in the last 12 months, the area remains active for buyers and sellers.</>
+          ) : null}
+          {(agentCountFromStats || total) > 0 ? (
+            <> There are {formatNumber(agentCountFromStats || total)} experienced real estate agents servicing {suburb.name}.</>
+          ) : null}
+        </p>
+
+        {/* 6.3.6 - Price by property type table */}
+        {pricesByType.some((p) => p.salesCount > 0) && (
+          <div className="mb-6">
+            <h3 className="font-heading text-lg font-semibold mb-3">
+              Price by Property Type
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-black">
+                    <th className="text-left py-2 pr-4 font-semibold">Type</th>
+                    <th className="text-right py-2 px-4 font-semibold">Median Price</th>
+                    <th className="text-right py-2 px-4 font-semibold">Sales Count</th>
+                    <th className="text-right py-2 pl-4 font-semibold">Avg DOM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricesByType.map((row) => (
+                    <tr key={row.propertyType} className="border-b border-gray-200">
+                      <td className="py-2 pr-4 font-medium">{row.propertyType}s</td>
+                      <td className="text-right py-2 px-4">
+                        {row.medianPrice ? formatCurrency(row.medianPrice) : "—"}
+                      </td>
+                      <td className="text-right py-2 px-4">
+                        {row.salesCount > 0 ? formatNumber(row.salesCount) : "—"}
+                      </td>
+                      <td className="text-right py-2 pl-4">
+                        {row.avgDaysOnMarket ? `${row.avgDaysOnMarket} days` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 6.3.7 - Notable recent sales */}
+        {notableSales.length > 0 && (
+          <div>
+            <h3 className="font-heading text-lg font-semibold mb-3">
+              Notable Recent Sales
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {notableSales.map((sale) => (
+                <Card key={sale.id} className="overflow-hidden">
+                  {sale.imageUrl ? (
+                    <div className="aspect-video bg-gray-100 relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={sale.imageUrl}
+                        alt={sale.address}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                      <Home className="w-8 h-8 text-gray-300" />
+                    </div>
+                  )}
+                  <CardContent className="p-4">
+                    <p className="font-semibold text-sm truncate" title={sale.address}>
+                      {sale.address}
+                    </p>
+                    <p className="text-voqo-green font-bold text-lg">
+                      {formatCurrency(sale.salePrice)}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                      {sale.bedrooms != null && (
+                        <span className="flex items-center gap-1">
+                          <Bed className="w-3 h-3" /> {sale.bedrooms}
+                        </span>
+                      )}
+                      {sale.bathrooms != null && (
+                        <span className="flex items-center gap-1">
+                          <Bath className="w-3 h-3" /> {sale.bathrooms}
+                        </span>
+                      )}
+                      {sale.saleDate && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {formatDate(sale.saleDate)}
+                        </span>
+                      )}
+                    </div>
+                    <Link
+                      href={`/agent/${sale.agentSlug}`}
+                      className="text-xs text-gray-600 hover:text-voqo-green mt-2 block"
+                    >
+                      Sold by {sale.agentName}
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* Filter bar */}
       <FilterBar totalResults={total} />

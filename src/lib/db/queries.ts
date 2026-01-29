@@ -1146,6 +1146,133 @@ export async function getAgentsBySuburb(filters: {
 }
 
 // ===========================================================================
+// Suburb Stats queries (for 6.3.5, 6.3.6, 6.3.7)
+// ===========================================================================
+
+export interface SuburbPriceByType {
+  propertyType: string;
+  medianPrice: number | null;
+  salesCount: number;
+  avgDaysOnMarket: number | null;
+}
+
+/**
+ * Get price stats by property type for a suburb (6.3.6)
+ * Returns median price, sales count, and avg DOM for Houses, Apartments, Townhouses, Land
+ */
+export async function getSuburbPricesByType(suburbName: string): Promise<SuburbPriceByType[]> {
+  const propertyTypes = ["House", "Apartment", "Townhouse", "Land"];
+  const results: SuburbPriceByType[] = [];
+
+  for (const pType of propertyTypes) {
+    const rows = sqliteDb
+      .prepare(
+        `SELECT sale_price, days_on_market
+         FROM sales
+         WHERE LOWER(suburb) = LOWER(?)
+           AND LOWER(property_type) = LOWER(?)
+           AND sale_price IS NOT NULL`
+      )
+      .all(suburbName, pType) as { sale_price: number | null; days_on_market: number | null }[];
+
+    const prices = rows.map((r) => r.sale_price).filter((p): p is number => p != null);
+    const doms = rows.map((r) => r.days_on_market).filter((d): d is number => d != null);
+
+    // Calculate median price
+    let medianPrice: number | null = null;
+    if (prices.length > 0) {
+      const sorted = [...prices].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      medianPrice = sorted.length % 2 !== 0
+        ? sorted[mid]
+        : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    }
+
+    // Calculate avg days on market
+    const avgDom = doms.length > 0
+      ? Math.round(doms.reduce((a, b) => a + b, 0) / doms.length)
+      : null;
+
+    results.push({
+      propertyType: pType,
+      medianPrice,
+      salesCount: rows.length,
+      avgDaysOnMarket: avgDom,
+    });
+  }
+
+  return results;
+}
+
+export interface NotableSale {
+  id: number;
+  imageUrl: string | null;
+  address: string;
+  suburb: string | null;
+  salePrice: number;
+  saleDate: string | null;
+  propertyType: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  agentName: string;
+  agentSlug: string;
+}
+
+/**
+ * Get notable recent sales in a suburb (6.3.7)
+ * Returns the 3 highest-priced sales in the last 6 months
+ */
+export async function getNotableSalesInSuburb(
+  suburbName: string,
+  limit: number = 3
+): Promise<NotableSale[]> {
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const sixMonthsAgoStr = sixMonthsAgo.toISOString().split("T")[0];
+
+  const rows = sqliteDb
+    .prepare(
+      `SELECT s.id, s.image_url, s.property_address, s.suburb, s.sale_price,
+              s.sale_date, s.property_type, s.bedrooms, s.bathrooms,
+              a.full_name as agent_name, a.slug as agent_slug
+       FROM sales s
+       INNER JOIN agents a ON s.agent_id = a.id
+       WHERE LOWER(s.suburb) = LOWER(?)
+         AND s.sale_price IS NOT NULL
+         AND s.sale_date >= ?
+       ORDER BY s.sale_price DESC
+       LIMIT ?`
+    )
+    .all(suburbName, sixMonthsAgoStr, limit) as {
+    id: number;
+    image_url: string | null;
+    property_address: string;
+    suburb: string | null;
+    sale_price: number;
+    sale_date: string | null;
+    property_type: string | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    agent_name: string;
+    agent_slug: string;
+  }[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    imageUrl: r.image_url,
+    address: r.property_address,
+    suburb: r.suburb,
+    salePrice: r.sale_price,
+    saleDate: r.sale_date,
+    propertyType: r.property_type,
+    bedrooms: r.bedrooms,
+    bathrooms: r.bathrooms,
+    agentName: r.agent_name,
+    agentSlug: r.agent_slug,
+  }));
+}
+
+// ===========================================================================
 // Helpers
 // ===========================================================================
 

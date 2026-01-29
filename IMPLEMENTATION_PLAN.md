@@ -1,8 +1,8 @@
 # IMPLEMENTATION PLAN
 
-> Last updated: 2026-01-29 16:30
+> Last updated: 2026-01-29 18:00
 > Current phase: 6/8 — Pages (polish remaining)
-> Progress: 67 completed / 92 total tasks
+> Progress: 70 completed / 92 total tasks
 
 > **prompt_build** and **prompt_plan**: Read `AGENTS.md` at the beginning of every conversation before taking any action. It contains critical build fixes and gotchas.
 
@@ -70,32 +70,32 @@ None. All blocking items resolved.
   - [ ] `pnpm build` passes
   - [ ] Playwright: verify chart renders with correct percentages
 
-### TASK-004: Agent sales filters
-- **Status:** `pending`
+### TASK-004: Agent sales filters ✓
+- **Status:** `complete`
 - **Scope:** Add sort dropdown + property type + date range filters to sales history table
 - **Files:** `src/app/agent/[slug]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify filter controls work, URL params update
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify filter controls work, URL params update
 
-### TASK-005: Agent sales mobile cards
-- **Status:** `pending`
+### TASK-005: Agent sales mobile cards ✓
+- **Status:** `complete`
 - **Scope:** Add card layout for sales on mobile (< 768px), keep table on desktop
 - **Files:** `src/app/agent/[slug]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: resize to 375px, verify card layout
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: resize to 375px, verify card layout
 
-### TASK-006: Agent sales property details
-- **Status:** `pending`
+### TASK-006: Agent sales property details ✓
+- **Status:** `complete`
 - **Scope:** Add property images, beds/baths/parking icons, sale method badge to sales rows
 - **Files:** `src/app/agent/[slug]/page.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Playwright: verify icons + badges render
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Playwright: verify icons + badges render
 
 ### TASK-007: Agent reviews sub-ratings chart
 - **Status:** `pending`
@@ -543,6 +543,18 @@ None. All blocking items resolved.
 - [x] Agents hub (`/agents`) with state cards
 - [x] Loading skeletons for all dynamic pages
 - [x] Global error boundary
+
+### Phase 6: Pages (Polish - 2026-01-29) ✓
+- [x] Agent profile: sales sort/filter (date, price high/low, property type)
+- [x] Agent profile: mobile card layout for sales
+- [x] Agent profile: property images, beds/baths/parking icons, sale method badges
+- [x] Agency profile: logo display (6.4.1)
+- [x] Agency profile: agent roster sort controls (6.4.4)
+- [x] Agency profile: top suburbs covered table (6.4.6)
+- [x] Agency profile: recent sales with agent attribution (6.4.7)
+- [x] Suburb page: market overview paragraph (6.3.5)
+- [x] Suburb page: price by property type table (6.3.6)
+- [x] Suburb page: notable recent sales cards (6.3.7)
 
 ### Phase 7: SEO ✓
 - [x] sitemap.ts — Split into index + 4 sub-sitemaps

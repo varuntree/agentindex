@@ -397,51 +397,244 @@ export default async function AgentProfilePage({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* Sales History                                                       */}
+      {/* Sales History (6.2.4, 6.2.5, 6.2.6)                                 */}
       {/* ------------------------------------------------------------------ */}
       <section className="mb-10">
-        <h2 className="font-heading text-xl font-bold mb-4">Sales History</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 className="font-heading text-xl font-bold">Sales History</h2>
+
+          {/* Sort & Filter Controls (6.2.4) */}
+          {(agent.sales ?? []).length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-500">Sort:</span>
+                <Link
+                  href={`/agent/${slug}?salesSort=date&salesType=${salesType}`}
+                  className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                    salesSort === "date"
+                      ? "bg-voqo-green text-white border-voqo-green"
+                      : "border-gray-300 hover:border-black"
+                  }`}
+                >
+                  Recent
+                </Link>
+                <Link
+                  href={`/agent/${slug}?salesSort=price_high&salesType=${salesType}`}
+                  className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                    salesSort === "price_high"
+                      ? "bg-voqo-green text-white border-voqo-green"
+                      : "border-gray-300 hover:border-black"
+                  }`}
+                >
+                  Price ↓
+                </Link>
+                <Link
+                  href={`/agent/${slug}?salesSort=price_low&salesType=${salesType}`}
+                  className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                    salesSort === "price_low"
+                      ? "bg-voqo-green text-white border-voqo-green"
+                      : "border-gray-300 hover:border-black"
+                  }`}
+                >
+                  Price ↑
+                </Link>
+              </div>
+
+              {propertyTypes.length > 1 && (
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-gray-500">Type:</span>
+                  <Link
+                    href={`/agent/${slug}?salesSort=${salesSort}&salesType=all`}
+                    className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                      salesType === "all"
+                        ? "bg-voqo-green text-white border-voqo-green"
+                        : "border-gray-300 hover:border-black"
+                    }`}
+                  >
+                    All
+                  </Link>
+                  {propertyTypes.slice(0, 4).map((type) => (
+                    <Link
+                      key={type}
+                      href={`/agent/${slug}?salesSort=${salesSort}&salesType=${type?.toLowerCase()}`}
+                      className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                        salesType === type?.toLowerCase()
+                          ? "bg-voqo-green text-white border-voqo-green"
+                          : "border-gray-300 hover:border-black"
+                      }`}
+                    >
+                      {type}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {sortedSales.length === 0 ? (
           <p className="text-gray-500">No sales recorded.</p>
         ) : (
           <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Days on Market</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedSales.map((sale) => (
-                  <TableRow key={sale.id}>
-                    <TableCell className="font-medium">
-                      {sale.propertyAddress}
-                    </TableCell>
-                    <TableCell>
-                      {sale.salePrice ? formatCurrency(sale.salePrice) : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {sale.saleDate ? formatDate(sale.saleDate) : "-"}
-                    </TableCell>
-                    <TableCell>{sale.propertyType ?? "-"}</TableCell>
-                    <TableCell>
-                      {sale.daysOnMarket != null ? sale.daysOnMarket : "-"}
-                    </TableCell>
+            {/* Desktop: Table View */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>Method</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedSales.map((sale) => (
+                    <TableRow key={sale.id}>
+                      <TableCell>
+                        <div className="flex items-start gap-3">
+                          {sale.imageUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={sale.imageUrl}
+                              alt={sale.propertyAddress}
+                              className="w-20 h-14 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-20 h-14 bg-gray-100 rounded border flex items-center justify-center">
+                              <Home className="w-5 h-5 text-gray-300" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate max-w-[200px]" title={sale.propertyAddress}>
+                              {sale.propertyAddress}
+                            </p>
+                            <p className="text-xs text-gray-500">{sale.propertyType ?? "Property"}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-semibold text-voqo-green">
+                        {sale.salePrice ? formatCurrency(sale.salePrice) : "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {sale.saleDate ? formatDate(sale.saleDate) : "-"}
+                        {sale.daysOnMarket != null && (
+                          <span className="block text-xs text-gray-500">
+                            {sale.daysOnMarket} days on market
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          {sale.bedrooms != null && (
+                            <span className="flex items-center gap-0.5">
+                              <Bed className="w-3 h-3" /> {sale.bedrooms}
+                            </span>
+                          )}
+                          {sale.bathrooms != null && (
+                            <span className="flex items-center gap-0.5">
+                              <Bath className="w-3 h-3" /> {sale.bathrooms}
+                            </span>
+                          )}
+                          {sale.carSpaces != null && (
+                            <span className="flex items-center gap-0.5">
+                              <Car className="w-3 h-3" /> {sale.carSpaces}
+                            </span>
+                          )}
+                          {sale.bedrooms == null && sale.bathrooms == null && sale.carSpaces == null && "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {sale.saleMethod ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full ${
+                            sale.saleMethod.toLowerCase().includes("auction")
+                              ? "bg-orange-100 text-orange-700"
+                              : sale.saleMethod.toLowerCase().includes("private")
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-700"
+                          }`}>
+                            {sale.saleMethod.toLowerCase().includes("auction") && (
+                              <Gavel className="w-3 h-3" />
+                            )}
+                            {sale.saleMethod}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile: Card View (6.2.5) */}
+            <div className="md:hidden grid gap-4">
+              {paginatedSales.map((sale) => (
+                <Card key={sale.id}>
+                  <CardContent className="p-4">
+                    <div className="flex gap-3">
+                      {sale.imageUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={sale.imageUrl}
+                          alt={sale.propertyAddress}
+                          className="w-24 h-20 object-cover rounded border shrink-0"
+                        />
+                      ) : (
+                        <div className="w-24 h-20 bg-gray-100 rounded border flex items-center justify-center shrink-0">
+                          <Home className="w-6 h-6 text-gray-300" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm line-clamp-2">{sale.propertyAddress}</p>
+                        <p className="text-voqo-green font-bold text-lg mt-1">
+                          {sale.salePrice ? formatCurrency(sale.salePrice) : "-"}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                          {sale.saleDate && <span>{formatDate(sale.saleDate)}</span>}
+                          {sale.propertyType && <span>{sale.propertyType}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                      <div className="flex items-center gap-3 text-xs text-gray-600">
+                        {sale.bedrooms != null && (
+                          <span className="flex items-center gap-0.5">
+                            <Bed className="w-3 h-3" /> {sale.bedrooms}
+                          </span>
+                        )}
+                        {sale.bathrooms != null && (
+                          <span className="flex items-center gap-0.5">
+                            <Bath className="w-3 h-3" /> {sale.bathrooms}
+                          </span>
+                        )}
+                        {sale.carSpaces != null && (
+                          <span className="flex items-center gap-0.5">
+                            <Car className="w-3 h-3" /> {sale.carSpaces}
+                          </span>
+                        )}
+                      </div>
+                      {sale.saleMethod && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          sale.saleMethod.toLowerCase().includes("auction")
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {sale.saleMethod}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
             {totalSalesPages > 1 && (
               <Pagination
                 currentPage={salesPage}
                 totalPages={totalSalesPages}
-                basePath={`/agent/${slug}`}
+                basePath={`/agent/${slug}?salesSort=${salesSort}&salesType=${salesType}`}
                 className="mt-4 justify-center"
               />
             )}

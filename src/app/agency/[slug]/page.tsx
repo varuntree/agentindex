@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Phone, Mail, Globe, Users, BarChart3, DollarSign } from "lucide-react";
+import { Phone, Mail, Globe, Users, BarChart3, DollarSign, TrendingUp } from "lucide-react";
 import { AgentCard } from "@/components/agent/agent-card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -13,7 +13,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { getAgencyBySlug } from "@/lib/db/queries";
+import { getAgencyBySlug, getAgencyEnrichment } from "@/lib/db/queries";
 import {
   formatCurrency,
   formatCompactPrice,
@@ -82,6 +82,9 @@ export default async function AgencyProfilePage({ params }: PageProps) {
   if (!agency) {
     notFound();
   }
+
+  // Fetch enrichment data for avgSalePrice
+  const enrichment = await getAgencyEnrichment(agency.id);
 
   const agentsList = agency.agents ?? [];
 
@@ -207,7 +210,7 @@ export default async function AgencyProfilePage({ params }: PageProps) {
           <p className="text-sm text-gray-500 mb-6">{fullAddress}</p>
         )}
 
-        <div className="grid grid-cols-3 gap-4 max-w-lg">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
           <StatCard
             icon={Users}
             value={formatNumber(agency.totalAgents ?? 0)}
@@ -222,6 +225,11 @@ export default async function AgencyProfilePage({ params }: PageProps) {
             icon={DollarSign}
             value={formatCompactPrice(agency.totalSalesVolume ?? 0)}
             label="Total Volume"
+          />
+          <StatCard
+            icon={TrendingUp}
+            value={enrichment.avgSalePrice ? formatCompactPrice(enrichment.avgSalePrice) : "-"}
+            label="Avg Sale Price"
           />
         </div>
       </section>

@@ -6,7 +6,6 @@ import type { VoiceStatus, VoiceMode, PageType, VoiceEntityInfo } from '@/lib/vo
 
 interface VoicePanelProps {
   status: VoiceStatus;
-  isSpeaking: boolean;
   error: string | null;
   voiceMode: VoiceMode;
   pageType: PageType;
@@ -56,7 +55,6 @@ function getAssistantLabel(pageType: PageType, entityInfo: VoiceEntityInfo | nul
  */
 export function VoicePanel({
   status,
-  isSpeaking,
   error,
   voiceMode,
   pageType,
@@ -94,22 +92,23 @@ export function VoicePanel({
     );
   }
 
-  // Connected state
-  if (status === 'connected') {
+  // Listening/Speaking states
+  if (status === 'listening' || status === 'speaking') {
+    const isSpeakingState = status === 'speaking';
     return (
       <div className="bg-white px-6 py-4 rounded-full shadow-lg flex items-center gap-3 border-2 border-black">
         <div
-          className={`w-8 h-8 rounded-full ${isSpeaking ? 'bg-blue-500' : 'bg-green-500'} flex items-center justify-center`}
+          className={`w-8 h-8 rounded-full ${isSpeakingState ? 'bg-blue-500' : 'bg-green-500'} flex items-center justify-center`}
         >
-          {isSpeaking ? (
+          {isSpeakingState ? (
             <Volume2 className="w-5 h-5 text-white" />
           ) : (
             <Mic className="w-5 h-5 text-white" />
           )}
         </div>
-        <AudioWaveform isSpeaking={isSpeaking} />
+        <AudioWaveform isSpeaking={isSpeakingState} />
         <span className="font-medium min-w-[90px]">
-          {isSpeaking ? 'Speaking...' : 'Listening...'}
+          {isSpeakingState ? 'Speaking...' : 'Listening...'}
         </span>
         <button
           onClick={onEnd}

@@ -100,7 +100,7 @@ export function VoiceProvider({
 
   const conversation = useConversation({
     onConnect: () => {
-      setStatus('connected');
+      setStatus('listening');
     },
     onDisconnect: () => {
       setStatus('idle');
@@ -117,9 +117,16 @@ export function VoiceProvider({
     },
   });
 
+  // Update status based on isSpeaking
+  useEffect(() => {
+    if (status === 'listening' || status === 'speaking') {
+      setStatus(conversation.isSpeaking ? 'speaking' : 'listening');
+    }
+  }, [conversation.isSpeaking, status]);
+
   // Session timeout
   useEffect(() => {
-    if (status === 'connected') {
+    if (status === 'listening' || status === 'speaking') {
       const timeout = setTimeout(async () => {
         await trackSessionEnd('timeout');
         conversation.endSession();
@@ -268,7 +275,6 @@ export function VoiceProvider({
       <div className="fixed bottom-6 right-6 z-50">
         <VoicePanel
           status={status}
-          isSpeaking={conversation.isSpeaking}
           error={error}
           voiceMode={voiceMode}
           pageType={pageType}

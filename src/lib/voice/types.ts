@@ -4,7 +4,7 @@
 
 export type VoiceMode = 'navigator' | 'assistant';
 
-export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'error';
+export type VoiceStatus = 'idle' | 'connecting' | 'listening' | 'speaking' | 'error';
 
 export type PageType = 'home' | 'agent' | 'agency' | 'suburb';
 

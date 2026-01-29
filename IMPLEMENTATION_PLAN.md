@@ -415,12 +415,14 @@ None. All blocking items resolved.
 - **Feedback:** Updated VoicePanel icon circle and AudioWaveform bars to use green-500 when listening, blue-500 when speaking.
 
 ### TASK-038: Voice listening status
-- **Status:** `pending`
+- **Status:** `completed`
 - **Scope:** Add separate "listening" status distinct from "connected" (5 states total)
-- **Files:** `src/components/voice/VoiceProvider.tsx`, `src/lib/voice/types.ts`
+- **Files:** `src/components/voice/VoiceProvider.tsx`, `src/lib/voice/types.ts`, `src/components/voice/VoicePanel.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] Status changes during conversation
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Status: idle → connecting → listening ↔ speaking → idle/error
+- **Feedback:** Changed VoiceStatus to 5 states: idle, connecting, listening, speaking, error. VoiceProvider updates status based on conversation.isSpeaking. VoicePanel derives visual state from status, removed isSpeaking prop.
 
 ### TASK-039: Voice context snake_case
 - **Status:** `pending`

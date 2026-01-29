@@ -21,7 +21,7 @@ function Skeleton({
 
 function SkeletonCard({ className = "" }: { className?: string }) {
   return (
-    <div className={`bg-white border-2 border-gray-200 rounded-lg p-6 space-y-4 ${className}`}>
+    <div className={`bg-white border-2 border-black rounded-lg p-6 space-y-4 ${className}`}>
       <div className="flex items-center gap-3">
         <Skeleton width="48px" height="48px" rounded="rounded-full" />
         <div className="flex-1 space-y-2">

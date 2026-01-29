@@ -56,6 +56,11 @@ export default function FilterBar({ totalResults, filteredResults }: FilterBarPr
     updateParams({ propertyType: next.length > 0 ? next : null });
   };
 
+  const clearAllFilters = () => {
+    updateParams({ propertyType: null, sort: 'sales' });
+  };
+
+  const hasActiveFilters = activeTypes.length > 0 || currentSort !== 'sales';
   const isFiltered = filteredResults !== undefined && filteredResults !== totalResults;
 
   return (
@@ -95,6 +100,14 @@ export default function FilterBar({ totalResults, filteredResults }: FilterBarPr
               </button>
             );
           })}
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="px-3 py-1 rounded-full text-sm border-2 border-red-500 text-red-500 bg-white hover:bg-red-50 cursor-pointer whitespace-nowrap transition-colors"
+            >
+              Clear All
+            </button>
+          )}
         </div>
 
         {/* Results count */}

@@ -62,7 +62,7 @@ function Pagination({
       "inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-medium transition-all";
     const activeClass = isActive
       ? "bg-voqo-green text-white border-2 border-black"
-      : "bg-white text-black border border-gray-300 hover:bg-gray-100";
+      : "bg-white text-black border-2 border-black hover:bg-gray-100";
     const disabledClass = isDisabled ? "opacity-50 pointer-events-none" : "";
     const classes = `${base} ${activeClass} ${disabledClass}`;
 

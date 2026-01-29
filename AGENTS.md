@@ -87,11 +87,15 @@ ai_docs/                    # AI integration docs
 - ESLint 9: `eslint .` not `next lint`
 - FTS5 migrations: manual SQL via db.exec()
 - Next.js 15: params/searchParams are Promises — must await
-- `agent-ralph-ui/` is an internal Vite tool — **completely separate** from Next.js app
-  - NEVER import from agent-ralph-ui in Next.js code
-  - Must be excluded from: pnpm workspace, tsconfig.json, eslint, Next.js output tracing
-  - Run with its own commands from its directory, not via Next.js scripts
-  - If build breaks mentioning agent-ralph-ui: check workspace config, tsconfig exclude, eslint ignore, and next.config tracing excludes
+- `agent-ralph/` and `agent-ralph-ui/` are internal tools — **completely separate** from Next.js app
+  - NEVER import from these directories in Next.js code
+  - Must be excluded from: tsconfig.json (`exclude`), next.config.ts (`webpack.watchOptions.ignored`)
+  - If build fails with `TypeError: a[d] is not a function` or TypeScript errors mentioning these dirs: add to exclusions
+  - Current exclusions required in both files:
+    ```
+    // tsconfig.json: "exclude": ["node_modules", "pipeline", "agent-ralph"]
+    // next.config.ts: ignored: ["**/agent-ralph/**", ...]
+    ```
 
 ## Build Issues & Fixes
 
@@ -148,7 +152,8 @@ When build fails, check in this order:
 
 ### @next/swc Version Mismatch
 - Symptoms: `TypeError: a[d] is not a function` during prerender, cryptic webpack-runtime.js errors
-- Cause: Next.js minor versions sometimes released without matching @next/swc packages on npm
+- Cause 1: Next.js minor versions sometimes released without matching @next/swc packages on npm
+- Cause 2: Non-excluded directories (e.g., `agent-ralph/`) being compiled — check tsconfig.json and next.config.ts exclusions first
 - Warning: `Mismatching @next/swc version, detected: X while Next.js is on Y`
 - Fix:
   1. Pin `next` to exact version with matching swc (e.g., `"next": "15.5.7"` not `"^15.1.0"`)

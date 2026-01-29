@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
       ignored: [
         "**/node_modules/**",
         "**/pipeline/**",
+        "**/agent-ralph/**",
         "**/.git/**",
       ],
     };

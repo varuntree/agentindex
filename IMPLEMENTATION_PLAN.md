@@ -1,8 +1,10 @@
-# AgentIndex Implementation Plan
+# IMPLEMENTATION PLAN
+
+> Last updated: 2026-01-29 16:30
+> Current phase: 6/8 — Pages (polish remaining)
+> Progress: 67 completed / 92 total tasks
 
 > **prompt_build** and **prompt_plan**: Read `AGENTS.md` at the beginning of every conversation before taking any action. It contains critical build fixes and gotchas.
-
-Last updated: 2026-01-29 — Comprehensive audit complete via 25 parallel agents (re-verified)
 
 ---
 
@@ -10,16 +12,15 @@ Last updated: 2026-01-29 — Comprehensive audit complete via 25 parallel agents
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 1: Next.js Setup | **Complete** | Next.js 15, React 19, Tailwind 4, TypeScript 5 |
-| Phase 2: Database Schema | **~95%** | 7 tables, FTS5, minor naming/constraint gaps |
-| Phase 3: Data Pipeline | **~70%** | Core works, missing image/config/utils/transactions |
-| Phase 3.5: Query Helpers | **Complete** | All query enrichments done |
-| Phase 4: API Routes | **~90%** | Endpoints work, response shape + field deviations |
-| Phase 5: UI Components | **~70%** | 19 components, border/font/layout spec gaps |
-| Phase 6: Pages | **~70%** | All pages exist, section gaps (suburb page improved) |
-| Phase 7: SEO | **Complete** | Sitemap split, JSON-LD enhanced, metadata titles updated |
-| Phase 8: Voice Integration | **~95%** | Working, minor CSS + tracking polish |
-| Phase 9: Testing & QA | **NOT STARTED** | No test framework |
+| Phase 1: Tech Stack | **Complete** | Next.js 15.5.7, React 19, Tailwind 4, TS 5 |
+| Phase 2: Data Model | **~95%** | 7 tables, 3 FTS5, 27 indexes; minor constraint gaps |
+| Phase 3: Data Pipeline | **~80%** | Core orchestrator + 5 sub-agents; missing config/utils |
+| Phase 4: API Routes | **Complete** | All 7 endpoints implemented with caching |
+| Phase 5: UI Components | **~85%** | 32 components; missing 3 cards + 2 charts |
+| Phase 6: Pages | **~80%** | All 7 routes; UI polish remaining |
+| Phase 7: SEO | **Complete** | Sitemap, JSON-LD, meta, OG images, robots.ts |
+| Phase 8: Voice | **~95%** | Full integration; minor CSS polish |
+| Phase 9: Testing | **Not Started** | No test framework |
 
 ---
 
@@ -39,208 +40,447 @@ None. All blocking items resolved.
 
 ---
 
-## HIGH PRIORITY — API & Data (Phase 3.5 + 4)
+## PHASE 6: Pages (Active)
 
-### API Response Shape (affects all consumers)
+### TASK-001: Agent header agency logo
+- **Status:** `pending`
+- **Scope:** Add 40px agency logo next to agent name in header section
+- **Files:** `src/app/agent/[slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: navigate to `/agent/[slug]`, verify agency logo visible
 
-- [x] **4.5** — All endpoints: Flatten responses (remove `{success,data}` wrapper, return data directly)
-- [x] **4.6** — `/api/agents`: Fix sort param values (spec: `sales_count`/`avg_price`/`name`; impl: `rating`/`sales`/`name`/`quality`)
-- [x] **4.7** — `/api/agents`: Add `suburb` context object when filtering by suburb
-- [x] **4.8** — `/api/agents`: Fix pagination field name (`totalPages` → `pages` per spec)
-- [x] **4.9** — `/api/voice/signed-url`: Change request body to use separate slug fields (`agentSlug`, `agencySlug`, `suburbSlug`) per spec
-- [x] **4.3** — `/api/suburb/[slug]`: Add `demographics`, `agents` list, `pagination` params
+### TASK-002: Agent header social links
+- **Status:** `pending`
+- **Scope:** Add LinkedIn, Facebook, Instagram, website icon links to agent header
+- **Files:** `src/app/agent/[slug]/page.tsx`, `src/components/ui/social-links.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify social icons render with correct hrefs
 
-**Playwright verify:** `fetch('/api/agents?suburb=bondi-beach-nsw')` → check response includes suburb stats.
+### TASK-003: Agent property type donut chart
+- **Status:** `pending`
+- **Blocked by:** TASK-014
+- **Scope:** Add donut chart showing property type breakdown (house/unit/land/townhouse)
+- **Files:** `src/app/agent/[slug]/page.tsx`, `src/components/ui/donut-chart.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify chart renders with correct percentages
 
-### Query Enrichment (Phase 3.5)
+### TASK-004: Agent sales filters
+- **Status:** `pending`
+- **Scope:** Add sort dropdown + property type + date range filters to sales history table
+- **Files:** `src/app/agent/[slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify filter controls work, URL params update
 
-- [x] **3.5.1** — `getSuburbMarketStats`: Add YoY price change, clearance rate, rental yield, avg days on market
-- [x] **3.5.2** — `getSuburbMarketStats`: Add demographics (population, median_age, median_income)
-- [x] **3.5.3** — Agent profile: Add computed stats object (median_sale_price, avg_days_on_market, sales_last_6_months, min/max_sale_price)
-- [x] **3.5.4** — `getAgencyBySlug`: Return logoUrl, avgSalePrice, topSuburbs array (market_share_suburb skipped for MVP)
-- [x] **3.5.5** — Agency: Add recent_sales query with agent attribution (not agent aggregates)
-- [x] **3.5.6** — Agent list: Add per-suburb sales stats (sales_count_suburb, avg_sale_price_suburb)
-- [x] **3.5.7** — Search results: Add photo_url, suburbs[], total_sales_count, avg_sale_price to agent results
-- [x] **3.5.8** — Suburb context: Add salesCount12mo, medianDom12mo to voice context builder
+### TASK-005: Agent sales mobile cards
+- **Status:** `pending`
+- **Scope:** Add card layout for sales on mobile (< 768px), keep table on desktop
+- **Files:** `src/app/agent/[slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: resize to 375px, verify card layout
 
----
+### TASK-006: Agent sales property details
+- **Status:** `pending`
+- **Scope:** Add property images, beds/baths/parking icons, sale method badge to sales rows
+- **Files:** `src/app/agent/[slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify icons + badges render
 
-## HIGH PRIORITY — Pages (Phase 6)
+### TASK-007: Agent reviews sub-ratings chart
+- **Status:** `pending`
+- **Blocked by:** TASK-015
+- **Scope:** Add horizontal bar chart for sub-ratings (Communication, Knowledge, Negotiation, etc.)
+- **Files:** `src/app/agent/[slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify bar chart renders with correct values
 
-### Homepage (`/`)
+### TASK-008: Agent reviews metadata
+- **Status:** `pending`
+- **Scope:** Add "Would Hire Again" %, buyer/seller badge, verified badge to review cards
+- **Files:** `src/app/agent/[slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify badges render on review cards
 
-- [x] **6.1.1** — Add "Popular Agencies" carousel section (spec 1.5: 8 agency logos)
-- [x] **6.1.2** — Suburb cards: Add median price + postcode display
-- [x] **6.1.3** — Hero: Add Voice Navigator button ("Ask me to find an agent")
-- [x] **6.1.4** — Stats: Add green vertical separators between stats
-- [x] **6.1.5** — How It Works: Rename steps to match spec (Search/Browse Data/Talk vs Search/Compare/Connect)
+### TASK-009: Agency stats section
+- **Status:** `pending`
+- **Blocked by:** TASK-015
+- **Scope:** Add performance grid + property type bar chart to agency profile
+- **Files:** `src/app/agency/[slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify stats section renders
 
-**Playwright verify:** Navigate to `/`, screenshot, verify carousel + suburb card fields + voice button.
+### TASK-010: State page sort controls
+- **Status:** `pending`
+- **Scope:** Add sort controls for suburbs (Agent Count, Name A-Z, Median Price)
+- **Files:** `src/app/agents/[state]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify sort dropdown works
 
-### Agent Profile (`/agent/[slug]`)
+### TASK-011: Agencies page sort controls
+- **Status:** `pending`
+- **Scope:** Add sort controls (Name A-Z, Agent Count, Sales Count, State)
+- **Files:** `src/app/agencies/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify sort dropdown works
 
-- [ ] **6.2.1** — Header: Add agency logo (40px height)
-- [ ] **6.2.2** — Header: Add social links (LinkedIn, Facebook, Instagram, website)
-- [ ] **6.2.3** — Stats: Add property type breakdown donut chart
-- [ ] **6.2.4** — Sales: Add sort dropdown + property type/date filters
-- [ ] **6.2.5** — Sales: Add card layout for mobile (currently table everywhere)
-- [ ] **6.2.6** — Sales: Add property images, beds/baths/parking icons, sale method badge
-- [ ] **6.2.7** — Reviews: Add sub-ratings bar chart (Communication, Knowledge, Negotiation, Responsiveness, Marketing)
-- [ ] **6.2.8** — Reviews: Add "Would Hire Again" %, buyer/seller badge, verified badge
-- [x] **6.2.9** — Reviews: Add pagination (currently shows all, spec: 10/page)
-- [x] **6.2.10** — Voice button: Change label to "Talk to [FirstName]'s Assistant"
-- [x] **6.2.11** — Stats: Rename "Total Sales" to "Properties Sold (12mo)", add "Sale Price Accuracy"
-- [x] **6.2.12** — Similar agents heading: "Similar Agents in [Primary Suburb]", add review count to cards
-
-**Playwright verify:** Navigate to `/agent/[slug]`, screenshot, verify logo + social links + charts + sales filters.
-
-### Suburb Listing (`/agents/[state]/[suburb-slug]`)
-
-- [x] **6.3.1** — Header: Add postcode in heading ✅ (verified present)
-- [x] **6.3.2** — Header: Add YoY price change indicators (+X% arrow) ✅ (verified present)
-- [x] **6.3.3** — Header: Add Avg Days on Market, Total Sales 12mo, Clearance Rate stats ✅ (6 stats present)
-- [x] **6.3.4** — Header: Add Voice button ("Help me find an agent in [Suburb]")
-- [x] **6.3.5** — Add Suburb Stats section: market overview text paragraph (150 words) ✅ (uses `getSuburbPricesByType()`, `getNotableSalesInSuburb()` from queries.ts)
-- [x] **6.3.6** — Add Suburb Stats section: median price by property type table (Houses/Apartments/Townhouses/Land) ✅
-- [x] **6.3.7** — Add Suburb Stats section: 3 notable recent sales with cards ✅
-- [x] **6.3.8** — Header: Add agent count subtitle ("X real estate agents" below h1)
-
-**Playwright verify:** Navigate to `/agents/nsw/bondi-beach-nsw`, screenshot, verify stats section present.
-
-### Agency Profile (`/agency/[slug]`)
-
-- [x] **6.4.1** — Header: Display agency logo (300x150px) ✅
-- [x] **6.4.2** — Header: Add Voice Receptionist button ("Talk to [Agency] Reception")
-- [x] **6.4.3** — Header: Add Avg Sale Price stat (4th stat card)
-- [x] **6.4.4** — Agent Roster: Add sort controls (Sales Count, Rating, Name) ✅
-- [ ] **6.4.5** — Add Agency Stats section: performance grid + property type bar chart
-- [x] **6.4.6** — Add Agency Stats section: Top 10 suburbs covered table ✅
-- [x] **6.4.7** — Recent Sales: Show individual property sales (not agent aggregates) ✅
-
-**Playwright verify:** Navigate to `/agency/[slug]`, screenshot, verify logo + voice button + stats section.
-
-### State/Agencies Pages
-
-- [ ] **6.5.1** — State page: Add sort controls for suburbs (Agent Count, Name A-Z, Median Price)
-- [ ] **6.5.2** — Agencies page: Add sort controls (Name A-Z, Agent Count, Sales Count, State)
-- [ ] **6.5.3** — Agencies page: Add agency stats to cards (total sales value, avg price)
-
----
-
-## HIGH PRIORITY — Components (Phase 5)
-
-### Navigation
-
-- [x] **5.1** — GlobalNav: Add Voice Navigator button ("Ask Navigator")
-- [x] **5.10** — GlobalFooter: Add About section with tagline + description (50 words)
-- [x] **5.11** — GlobalFooter: Add Contact link to legal section
-- [x] **5.4** — GlobalFooter: Make suburb links dynamic from DB (currently hardcoded)
-- [x] **5.13** — ~~GlobalNav: Add Suburbs/About links~~ → Keep current nav (decision made)
-
-**Playwright verify:** Screenshot nav, verify voice button + all links. Screenshot footer, verify About section.
-
-### Missing Components
-
-- [ ] **5.5** — Add mobile search overlay component (fullscreen, large input, recent searches, top suburbs)
-- [ ] **5.6** — Add form primitives: Textarea, Select, Checkbox, Radio
-- [ ] **5.2** — FilterBar: Add "Clear All" button
-- [ ] **5.3** — FilterBar: Add property type chips on suburb page
-- [ ] **5.14** — Add DonutChart component for property type breakdown
-- [ ] **5.15** — Add BarChart component for sub-ratings display
-
-### Spec Alignment
-
-- [ ] **5.12** — Button: Change border from 2px to 3px per spec
-- [ ] **5.9** — Pagination: Fix border consistency (inactive uses `border` 1px, should be `border-2`)
-- [x] **5.7** — StatCard: Change font from text-3xl to text-4xl per spec
-- [ ] **5.16** — Skeleton: Change border from border-gray-200 to border-black per spec
-- [ ] **CQ.2** — AgentCard: Add Home/TrendingUp icons for stats, 3-col grid layout
-- [ ] **CQ.3** — AgentCard: Add review count in rating display (show "4.2 (24)" format)
-- [ ] **CQ.4** — AgentCard: Add state/location stat column per spec
-
-**Playwright verify:** Screenshot button, pagination, stat card; compare border/font to spec.
+### TASK-012: Agencies page card stats
+- **Status:** `pending`
+- **Scope:** Add total sales value, avg price to agency cards
+- **Files:** `src/app/agencies/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: verify stats display on cards
 
 ---
 
-## ~~HIGH PRIORITY — SEO (Phase 7)~~ **COMPLETE**
+## PHASE 5: UI Components
 
-### Sitemap
+### TASK-013: Mobile search overlay
+- **Status:** `pending`
+- **Scope:** Add fullscreen mobile search overlay with recent searches, top suburbs
+- **Files:** `src/components/search/mobile-search-overlay.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Playwright: resize to 375px, verify overlay opens from nav
 
-- [x] **7.1** — Split sitemap into index + 4 files: agents, suburbs, agencies, pages
-- [x] **7.2** — Fix changefreq: suburbs weekly, agents/agencies monthly, static yearly
-- [x] **7.10** — Fix priorities: static pages 0.5 (not 1.0), agencies 0.7/monthly
+### TASK-014: DonutChart component
+- **Status:** `pending`
+- **Scope:** Create reusable donut chart for property type breakdown
+- **Files:** `src/components/ui/donut-chart.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Component renders with test data
 
-### JSON-LD Schemas
+### TASK-015: BarChart component
+- **Status:** `pending`
+- **Scope:** Create horizontal bar chart for sub-ratings display
+- **Files:** `src/components/ui/bar-chart.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Component renders with test data
 
-- [x] **7.3** — Agent: Add `url`, `jobTitle: "Real Estate Agent"`, `worksFor.url`, `review` array
-- [x] **7.4** — Agent: Change `areaServed` from `Place` to `City` type
-- [x] **7.5** — Agent: Fix `reviewCount` vs `ratingCount` inconsistency
-- [x] **7.6** — Agency: Add `aggregateRating`, `employee` array, full `areaServed` list
-- [x] **7.7** — Suburb ItemList: Add agent `aggregateRating` + `url` to each ListItem
-- [x] **7.11** — Add BreadcrumbList schema to agent/agency pages (uses new helpers)
+### TASK-016: Form primitives
+- **Status:** `pending`
+- **Scope:** Add Textarea, Select, Checkbox, Radio form components
+- **Files:** `src/components/ui/textarea.tsx`, `src/components/ui/select.tsx`, `src/components/ui/checkbox.tsx`, `src/components/ui/radio.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] All components render with focus states
 
-### Metadata
+### TASK-017: FilterBar clear button
+- **Status:** `pending`
+- **Scope:** Add "Clear All" button to FilterBar when filters active
+- **Files:** `src/components/search/filter-bar.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Button appears when filters active, clears all on click
 
-- [x] **7.8** — Suburb title: Add "Best", year (2026), postcode per spec
-- [x] **7.9** — Homepage SearchAction: Fix URL (`/search?q=` not `/agents?q=`)
-- [x] **7.12** — Agent title: Add agency name, fix separator
-- [x] **7.13** — Agency title: Fix format
-- [x] **7.14** — State title: Add year (2026)
+### TASK-018: FilterBar property chips
+- **Status:** `pending`
+- **Scope:** Add property type filter chips (House, Unit, Land, Townhouse) to suburb page
+- **Files:** `src/components/search/filter-bar.tsx`, `src/app/agents/[state]/[suburb-slug]/page.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Chips toggle and filter agent list
+
+### TASK-019: Button border spec
+- **Status:** `pending`
+- **Scope:** Change button border from 2px to 3px per spec
+- **Files:** `src/components/ui/button.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Visual: border is 3px
+
+### TASK-020: Pagination border fix
+- **Status:** `pending`
+- **Scope:** Fix inactive pagination buttons to use border-2 (not border-1)
+- **Files:** `src/components/ui/pagination.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Visual: all buttons have consistent 2px border
+
+### TASK-021: Skeleton border fix
+- **Status:** `pending`
+- **Scope:** Change skeleton border from gray-200 to black per spec
+- **Files:** `src/components/ui/skeleton.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Visual: skeleton has black border
+
+### TASK-022: AgentCard icons
+- **Status:** `pending`
+- **Scope:** Add Home/TrendingUp icons for stats, use 3-col grid layout
+- **Files:** `src/components/agent/agent-card.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Visual: icons render, 3-col layout
+
+### TASK-023: AgentCard review count
+- **Status:** `pending`
+- **Scope:** Add review count to rating display ("4.2 (24)" format)
+- **Files:** `src/components/agent/agent-card.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Visual: rating shows count in parentheses
+
+### TASK-024: AgentCard location stat
+- **Status:** `pending`
+- **Scope:** Add state/location stat column per spec
+- **Files:** `src/components/agent/agent-card.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] `pnpm build` passes
+  - [ ] Visual: location stat visible
 
 ---
 
-## MEDIUM PRIORITY — Pipeline (Phase 3)
+## PHASE 3: Data Pipeline
 
-- [x] **3.1** — ~~Image download system~~ → Using direct URLs (decision made)
-- [ ] **3.4** — Add config file support (`pipeline-config.json` with locations[], enrichment{}, rate_limits{}, quality{})
-- [ ] **3.3** — Add CLI utility commands: `pnpm pipeline:validate`, `pnpm pipeline:report`, `pnpm pipeline:retry`, `pnpm pipeline:dedupe`
-- [ ] **3.2** — Add license verification integration (NSW Fair Trading)
-- [ ] **3.5** — Add per-domain rate limiting via `DomainRateLimiter` class (spec: 30 req/domain/min)
-- [ ] **3.6** — Wrap storage operations in `db.transaction()` for atomicity
-- [ ] **3.7** — Implement merge strategy for data conflicts (prefer non-null, longer text, unique arrays)
-- [ ] **3.8** — Add `--locations` flag for multi-location processing
-- [ ] **3.9** — Add `pnpm pipeline:enrich` command for enrichment-only runs
-- [ ] **3.10** — Use Claude SDK `structuredOutput` param instead of manual JSON extraction
+### TASK-025: Pipeline config file
+- **Status:** `pending`
+- **Scope:** Add `pipeline-config.json` support with locations[], enrichment{}, rate_limits{}, quality{}
+- **Files:** `pipeline/config/schema.ts`, `pipeline/scripts/pipeline.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Config file loads and validates
+
+### TASK-026: Pipeline CLI utilities
+- **Status:** `pending`
+- **Scope:** Add `pnpm pipeline:validate`, `pipeline:report`, `pipeline:retry`, `pipeline:dedupe` commands
+- **Files:** `pipeline/scripts/*.ts`, `package.json`
+- **Verification:**
+  - [ ] All commands run without error
+  - [ ] Help text displays
+
+### TASK-027: License verification
+- **Status:** `pending`
+- **Scope:** Add NSW Fair Trading license verification integration
+- **Files:** `pipeline/agents/license-verifier.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Test with known license number
+
+### TASK-028: Domain rate limiter
+- **Status:** `pending`
+- **Scope:** Add `DomainRateLimiter` class (30 req/domain/min per spec)
+- **Files:** `pipeline/utils/rate-limiter.ts`, `pipeline/scripts/pipeline.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Rate limiting logs visible
+
+### TASK-029: Transaction wrapper
+- **Status:** `pending`
+- **Scope:** Wrap storage operations in `db.transaction()` for atomicity
+- **Files:** `pipeline/scripts/pipeline.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Rollback on error
+
+### TASK-030: Merge strategy
+- **Status:** `pending`
+- **Scope:** Implement data conflict merge (prefer non-null, longer text, unique arrays)
+- **Files:** `pipeline/utils/merge.ts`, `pipeline/scripts/pipeline.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Unit test passes
+
+### TASK-031: Multi-location flag
+- **Status:** `pending`
+- **Scope:** Add `--locations` flag for multi-location processing
+- **Files:** `pipeline/scripts/pipeline.ts`
+- **Verification:**
+  - [ ] `pnpm pipeline:run --locations "Sydney,Melbourne"` works
+
+### TASK-032: Enrich-only command
+- **Status:** `pending`
+- **Scope:** Add `pnpm pipeline:enrich` for enrichment-only runs
+- **Files:** `pipeline/scripts/enrich.ts`, `package.json`
+- **Verification:**
+  - [ ] Command runs on existing agents
+
+### TASK-033: Claude structured output
+- **Status:** `pending`
+- **Scope:** Use Claude SDK `structuredOutput` param instead of manual JSON extraction
+- **Files:** `pipeline/scripts/pipeline.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Output validates against Zod schema
 
 ---
 
-## MEDIUM PRIORITY — Voice Polish (Phase 8)
+## PHASE 8: Voice Polish
 
-- [ ] **8.5** — CSS: Rename `voice-bar` to `animate-wave`, use height animation per spec (currently uses scaleY transform)
-- [ ] **8.6** — Remove unused VoiceButton.tsx (VoicePanel handles button rendering)
-- [ ] **8.7** — Add usage tracking: `logVoiceSession()` to database with session duration
-- [ ] **8.8** — VoicePanel: Use green (bg-green-500) for listening state, blue for speaking (currently uses bg-primary for both)
-- [ ] **8.9** — Add separate "listening" status distinct from "connected" (spec: 5 states, impl: 4)
-- [ ] **8.10** — Voice context field names: use snake_case per spec (currently camelCase, non-breaking but inconsistent)
+### TASK-034: Voice CSS animation
+- **Status:** `pending`
+- **Scope:** Rename `voice-bar` to `animate-wave`, use height animation (not scaleY)
+- **Files:** `src/app/globals.css`, `src/components/voice/AudioWaveform.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Visual: bars animate with height
+
+### TASK-035: Remove unused VoiceButton
+- **Status:** `pending`
+- **Scope:** Delete VoiceButton.tsx if VoicePanel handles button rendering
+- **Files:** `src/components/voice/VoiceButton.tsx`
+- **Verification:**
+  - [ ] `pnpm build` passes
+  - [ ] No import errors
+
+### TASK-036: Voice usage tracking
+- **Status:** `pending`
+- **Scope:** Add `logVoiceSession()` to database with session duration
+- **Files:** `src/lib/voice/tracking.ts`, `src/components/voice/VoiceProvider.tsx`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Session logged to DB
+
+### TASK-037: Voice state colors
+- **Status:** `pending`
+- **Scope:** Use green (bg-green-500) for listening, blue for speaking
+- **Files:** `src/components/voice/VoicePanel.tsx`
+- **Verification:**
+  - [ ] Visual: colors match spec
+
+### TASK-038: Voice listening status
+- **Status:** `pending`
+- **Scope:** Add separate "listening" status distinct from "connected" (5 states total)
+- **Files:** `src/components/voice/VoiceProvider.tsx`, `src/lib/voice/types.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Status changes during conversation
+
+### TASK-039: Voice context snake_case
+- **Status:** `pending`
+- **Scope:** Change voice context field names to snake_case per spec
+- **Files:** `src/lib/voice/context.ts`, `src/lib/voice/types.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] API response uses snake_case
 
 ---
 
-## MEDIUM PRIORITY — Schema Alignment (Phase 2)
+## PHASE 2: Schema Alignment
 
-- [x] **2.1** — ~~Rename lat/lng~~ → Keep as-is (decision made)
-- [x] **2.2** — ~~Timestamp storage~~ → Keep integer mode (decision made)
-- [ ] **2.3** — Add notNull constraint to pipelineRuns.startedAt
-- [ ] **2.4** — Add missing index: `agent_suburbs_agent_id_idx` (spec line 369)
-- [ ] **2.5** — Fix index name: `sales_agent_sale_date_idx` → `sales_agent_date_idx` per spec
-- [ ] **2.6** — agent_suburbs.isPrimary: Change from plain integer to `{ mode: 'boolean' }`
+### TASK-040: pipelineRuns notNull
+- **Status:** `pending`
+- **Scope:** Add notNull constraint to pipelineRuns.startedAt
+- **Files:** `src/lib/db/schema.ts`, `drizzle/migrations/`
+- **Verification:**
+  - [ ] `pnpm db:generate` creates migration
+  - [ ] `pnpm db:migrate` applies
+
+### TASK-041: agent_suburbs index
+- **Status:** `pending`
+- **Scope:** Add missing index `agent_suburbs_agent_id_idx` (spec line 369)
+- **Files:** `src/lib/db/schema.ts`
+- **Verification:**
+  - [ ] `pnpm db:generate` creates migration
+  - [ ] Index visible in DB
+
+### TASK-042: Sales index rename
+- **Status:** `pending`
+- **Scope:** Rename `sales_agent_sale_date_idx` → `sales_agent_date_idx` per spec
+- **Files:** `src/lib/db/schema.ts`
+- **Verification:**
+  - [ ] Index renamed in DB
+
+### TASK-043: isPrimary boolean mode
+- **Status:** `pending`
+- **Scope:** Change agent_suburbs.isPrimary from integer to `{ mode: 'boolean' }`
+- **Files:** `src/lib/db/schema.ts`
+- **Verification:**
+  - [ ] `pnpm typecheck` passes
+  - [ ] Queries return boolean
 
 ---
 
-## LOW PRIORITY — Testing (Phase 9)
+## PHASE 9: Testing
 
-- [ ] **9.1** — Install Vitest + @testing-library/react
-- [ ] **9.2** — Configure test scripts in package.json
-- [ ] **9.3** — Write unit tests for query functions
-- [ ] **9.4** — Write component tests for critical UI
-- [ ] **9.5** — Add E2E tests with Playwright
-- [ ] **9.6** — Set up CI test runner
+### TASK-044: Install test framework
+- **Status:** `pending`
+- **Scope:** Install Vitest + @testing-library/react
+- **Files:** `package.json`, `vitest.config.ts`
+- **Verification:**
+  - [ ] `pnpm test` runs
+
+### TASK-045: Configure test scripts
+- **Status:** `pending`
+- **Blocked by:** TASK-044
+- **Scope:** Add test, test:watch, test:coverage scripts to package.json
+- **Files:** `package.json`
+- **Verification:**
+  - [ ] All scripts run
+
+### TASK-046: Query function tests
+- **Status:** `pending`
+- **Blocked by:** TASK-044
+- **Scope:** Write unit tests for core query functions
+- **Files:** `src/lib/db/__tests__/queries.test.ts`
+- **Verification:**
+  - [ ] `pnpm test` passes
+
+### TASK-047: Component tests
+- **Status:** `pending`
+- **Blocked by:** TASK-044
+- **Scope:** Write tests for critical UI components (Button, Card, AgentCard)
+- **Files:** `src/components/__tests__/*.test.tsx`
+- **Verification:**
+  - [ ] `pnpm test` passes
+
+### TASK-048: E2E Playwright tests
+- **Status:** `pending`
+- **Scope:** Add E2E tests for critical user flows
+- **Files:** `e2e/*.spec.ts`, `playwright.config.ts`
+- **Verification:**
+  - [ ] `pnpm test:e2e` passes
+
+### TASK-049: CI test runner
+- **Status:** `pending`
+- **Blocked by:** TASK-044
+- **Scope:** Set up GitHub Actions for test runs
+- **Files:** `.github/workflows/test.yml`
+- **Verification:**
+  - [ ] CI runs on PR
 
 ---
 
-## Completed Phases (Verified)
+## Completed Phases (Verified 2026-01-29)
 
-### Phase 1: Next.js Foundation
-- [x] Next.js 15.1.0 with App Router
+### Phase 1: Next.js Foundation ✓
+- [x] Next.js 15.5.7 with App Router
 - [x] React 19.0.0
 - [x] TypeScript 5.7.0 (strict mode)
 - [x] Tailwind CSS 4.0.0 with @theme CSS variables
@@ -248,89 +488,82 @@ None. All blocking items resolved.
 - [x] Path aliases: `@/*` -> `./src/*`
 - [x] ESLint configured
 - [x] better-sqlite3 in serverExternalPackages
+- [x] pnpm.onlyBuiltDependencies configured
 
-### Phase 2: Database Schema
+### Phase 2: Database Schema (Core) ✓
 - [x] 7 tables: agencies, agents, suburbs, agentSuburbs, sales, reviews, pipelineRuns
 - [x] Drizzle ORM 0.38.0 with SQLite
 - [x] FTS5 virtual tables: agents_fts, agencies_fts, suburbs_fts (manual SQL)
 - [x] Auto-sync triggers for FTS tables
 - [x] 17,503 suburbs seeded from Matthew Proctor CSV
 - [x] WAL mode, foreign keys enabled
-- [x] Comprehensive indexes
+- [x] 27 indexes across all tables
 
-### Phase 3: Data Pipeline (Core)
+### Phase 3: Data Pipeline (Core) ✓
 - [x] `pipeline/scripts/pipeline.ts` v2 CLI with multi-phase architecture
-- [x] `pipeline/agents/skills.ts` specialized skill prompts
+- [x] `pipeline/agents/skills.ts` 3 specialized skill prompts
+- [x] `pipeline/agents/index.ts` 3 sub-agent prompts (Sales, Review, License)
 - [x] `pipeline/schemas/index.ts` Zod schemas with nullable fields
 - [x] Retry logic with exponential backoff (3 retries)
 - [x] Parallel agent enrichment (configurable concurrency)
 - [x] Pipeline run tracking in `pipeline_runs` table
 - [x] Sample data seeder for MVP demos
 
-### Phase 3.5: Query Helpers (Core)
-- [x] Agent queries: getAgentBySlug, getAgentsList, getSimilarAgents, getAgentCount
-- [x] Agency queries: getAgencyBySlug, getAgenciesList, getAgencyCount, getTopAgencies
-- [x] Suburb queries: getSuburbBySlug, getSuburbsList, getNearbySuburbs, getTopSuburbs, getTopAgentsInSuburb
-- [x] Search queries: searchFTS, autocompleteFTS (with FTS5 fallback)
-- [x] Stats queries: getSiteStats, getStateStats, getSuburbMarketStats (partial)
+### Phase 3.5: Query Helpers ✓
+- [x] Agent: getAgentBySlug, getAgentsList, getSimilarAgents, getAgentCount, getAgentsBySuburb, getAgentComputedStats
+- [x] Agency: getAgencyBySlug, getAgenciesList, getAgencyCount, getTopAgencies, getAgencyRecentSales, getAgencyEnrichment
+- [x] Suburb: getSuburbBySlug, getSuburbsList, getNearbySuburbs, getTopSuburbs, getTopAgentsInSuburb, getSuburbMarketStats, getSuburbPricesByType, getNotableSalesInSuburb
+- [x] Search: searchFTS, autocompleteFTS (with FTS5 prefix matching)
+- [x] Stats: getSiteStats, getStateStats
 
-### Phase 4: API Routes (Core)
-- [x] GET /api/search — Full-text search
-- [x] GET /api/search/autocomplete — Prefix suggestions
-- [x] GET /api/agents — Paginated list with filters
-- [x] GET /api/agent/[slug] — Single agent with relations
-- [x] GET /api/agency/[slug] — Single agency with agents
-- [x] GET /api/suburb/[slug] — Suburb market data (partial)
-- [x] POST /api/voice/signed-url — ElevenLabs signed URL with overrides
+### Phase 4: API Routes ✓
+- [x] GET /api/search — Full-text search with type filtering
+- [x] GET /api/search/autocomplete — Prefix suggestions (min 2 chars)
+- [x] GET /api/agents — Paginated list with filters (suburb, agency, state, property_type)
+- [x] GET /api/agent/[slug] — Single agent with computed stats, sales, reviews
+- [x] GET /api/agency/[slug] — Single agency with agents, recent sales, enrichment
+- [x] GET /api/suburb/[slug] — Suburb market data, demographics, agents, pagination
+- [x] POST /api/voice/signed-url — ElevenLabs signed URL with context overrides
 - [x] POST /api/revalidate — ISR trigger with auth
 - [x] GET /api/og — Dynamic OG image generation
 
-### Phase 5: UI Components (Core)
-- [x] Core: Button, Card, Badge, Input, StarRating, Pagination, Skeleton, StatCard
-- [x] Domain: AgentCard, AgentPhoto, SuburbBadge, PriceDisplay, PropertyTypeIcon, Table
-- [x] Layout: Breadcrumb, SearchBar, FilterBar, GlobalNav, GlobalFooter
-- [x] Voice: VoiceProvider, VoicePanel, VoiceButton, AudioWaveform, VoiceContextSetter, VoiceLayoutWrapper, HeroVoiceButton
+### Phase 5: UI Components (Core) ✓
+- [x] Core: Button (4 variants), Card, Badge (5 variants), Input, StarRating (3 sizes), Pagination, Skeleton, StatCard, Table
+- [x] Domain: AgentCard, AgentPhoto (4 sizes), SuburbBadge, PriceDisplay, PropertyTypeIcon
+- [x] Layout: Breadcrumb, SearchBar (with autocomplete), FilterBar, GlobalNav (responsive), GlobalFooter (dynamic suburbs)
+- [x] Voice: VoiceProvider, VoicePanel (4 states), VoiceButton, AudioWaveform, VoiceContextSetter, VoiceLayoutWrapper, HeroVoiceButton, SuburbVoiceButton, AgencyVoiceButton
 
-### Phase 6: Pages (Core)
+### Phase 6: Pages (Core) ✓
 - [x] Home page (`/`) with hero, featured suburbs, how-it-works, stats, popular agencies carousel
-- [x] Agent profile (`/agent/[slug]`) with sales, reviews, similar agents
-- [x] Suburb listing (`/agents/[state]/[suburb-slug]`) with filters, pagination, nearby suburbs
-- [x] Agency profile (`/agency/[slug]`) with agent roster
-- [x] Agencies list (`/agencies`) with state filtering
-- [x] State listing (`/agents/[state]`) with suburb grid
+- [x] Agent profile (`/agent/[slug]`) with stats, sales (20/page), reviews (10/page), similar agents
+- [x] Suburb listing (`/agents/[state]/[suburb-slug]`) with market overview, price table, notable sales, agents (20/page), nearby suburbs
+- [x] Agency profile (`/agency/[slug]`) with agent roster, top suburbs, recent sales (20)
+- [x] Agencies list (`/agencies`) with state filtering, pagination (24/page)
+- [x] State listing (`/agents/[state]`) with suburb grid (48/page)
 - [x] Agents hub (`/agents`) with state cards
 - [x] Loading skeletons for all dynamic pages
 - [x] Global error boundary
 
-### Phase 7: SEO (Complete)
-- [x] sitemap.ts — Split into index + 4 sub-sitemaps (static, agents, suburbs, agencies)
+### Phase 7: SEO ✓
+- [x] sitemap.ts — Split into index + 4 sub-sitemaps
 - [x] Sitemap priorities: suburbs 0.9, agents 0.8, agencies 0.7, static 0.5
-- [x] Sitemap changefreq: suburbs weekly, agents/agencies monthly, static yearly
 - [x] robots.ts — Allow crawlers, block /api/*
-- [x] JSON-LD: RealEstateAgent with url, jobTitle, worksFor.url, review array, City areaServed
-- [x] JSON-LD: Agency with aggregateRating, employee array, areaServed list
-- [x] JSON-LD: Suburb ItemList with agent aggregateRating + url
-- [x] JSON-LD: BreadcrumbList on agent/agency/suburb pages (new helpers)
-- [x] JSON-LD: Homepage SearchAction URL fixed (/search?q=)
+- [x] JSON-LD: RealEstateAgent, Organization, Review, AggregateRating, BreadcrumbList, ItemList
 - [x] Metadata helpers: agentMetadata, suburbMetadata, agencyMetadata, stateMetadata
-- [x] Metadata titles: Agent "[Name] — Real Estate Agent | [Agency] | AgentIndex"
-- [x] Metadata titles: Suburb "Best Real Estate Agents in [Suburb], [State] [Postcode] — 2026 | AgentIndex"
-- [x] Metadata titles: Agency "[Agency] — Agents, Reviews & Sales | AgentIndex"
-- [x] Metadata titles: State "Real Estate Agents in [State] — 2026 | AgentIndex"
+- [x] Title templates per spec
 - [x] OG image generation via @vercel/og
 - [x] Canonical tags on all pages
-- [x] metadataBase configured
 
-### Phase 8: Voice Integration
+### Phase 8: Voice Integration (Core) ✓
 - [x] @elevenlabs/react integration with useConversation
-- [x] Voice types, prompts, context builders, tools
+- [x] Voice types, prompts, context builders, tools in `src/lib/voice/`
 - [x] VoiceProvider with session management + 5min timeout
 - [x] VoicePanel with all UI states (idle, connecting, connected, error)
 - [x] VoiceLayoutWrapper for page type detection
 - [x] VoiceContextSetter for personalized labels
 - [x] 6 Navigator tools + 1 Assistant tool
+- [x] Signed URL generation with context overrides
 - [x] Mode switching via custom events
-- [x] ElevenLabs agent configured (ID: agent_1201kg32hgw3ebvskwnngc4qcy8w)
 
 ---
 
@@ -342,27 +575,19 @@ None. All blocking items resolved.
 - ESLint 9: `eslint .` not `next lint`
 - FTS5: manual SQL via db.exec() (not in Drizzle journal)
 - Next.js 15: params/searchParams are Promises — must await
-- SuburbBadge: route must be `/agents/{state}/{slug}`
 - Voice: VoiceProvider must wrap app in layout.tsx
 - ElevenLabs: POST to `get-signed-url` (hyphen not underscore)
-- VoiceLayoutWrapper: client wrapper using usePathname() for page detection
 - Pipeline: exclude from tsconfig.json to avoid Next.js build conflicts
 - Claude Agent SDK: query() returns AsyncGenerator, iterate with `for await`
-- Sample data seeder: MVP demos while AI pipeline is refined
-- SQLite ALTER TABLE for adding columns: run manually when drizzle-kit push would delete FTS tables
+- SQLite ALTER TABLE: run manually when drizzle-kit push would delete FTS tables
 
 ### Build Environment
-- **NODE_ENV**: Only use `development`, `production`, or `test` — non-standard values cause webpack chunk mismatches, corrupted cache, and `.nft.json` trace errors
-- **Corrupted .next cache**: When seeing strange webpack errors (`Cannot find module './15.js'`, `pages-manifest.json` not found), run `rm -rf .next && pnpm build`
+- **NODE_ENV**: Only use `development`, `production`, or `test` — non-standard values cause webpack chunk mismatches
+- **Corrupted .next cache**: Run `rm -rf .next && pnpm build` for strange webpack errors
 
 ### SSR & Static Generation
-- **Browser-only libraries**: Libraries like `@elevenlabs/react` that use WebSocket, MediaDevices, etc. must be dynamically imported with `ssr: false` to avoid `useRef` null errors during prerender
-- **React APIs in shared components**: Components using `forwardRef`, `useRef`, `useState` need `'use client'` directive even if they don't directly call hooks
-- **Client wrappers for SSR-safe voice**: Created HeroVoiceButton client component to handle voice interactions in SSR contexts (hero sections, static pages)
-
-### Config Files
-- **pnpm-workspace.yaml**: Must be valid YAML; `onlyBuiltDependencies` belongs in `package.json` under `pnpm` key, not in workspace file
-- **agent-ralph-ui isolation**: Separate Vite project must be excluded from pnpm workspace, tsconfig.json, eslint, and Next.js output tracing to prevent build contamination
+- **Browser-only libraries**: Use `dynamic(() => import(...), { ssr: false })` for @elevenlabs/react
+- **React APIs in shared components**: Need `'use client'` directive for forwardRef, useRef, useState
 
 ---
 
@@ -379,30 +604,17 @@ Last verified: 2026-01-29
 
 ---
 
-## Current Database State
-
-| Entity | Count | Status |
-|--------|-------|--------|
-| Suburbs | 17,503 | Seeded from CSV |
-| Agents | 7 | Sample data |
-| Agencies | 3 | Sample data |
-| Sales | 14 | Sample data |
-| Reviews | 12 | Sample data |
-| FTS Tables | 3 | Populated |
-
----
-
 ## Decisions Made
 
 | # | Question | Decision |
 |---|----------|----------|
-| 1 | Image storage | Direct URLs (no download, already implemented) |
+| 1 | Image storage | Direct URLs (no download) |
 | 2 | Pipeline hosting | Local |
-| 3 | Response wrapper | Flatten (remove `{success,data}` wrapper) |
-| 4 | Demographics | Skip for MVP, hide section |
+| 3 | Response wrapper | Flatten (remove `{success,data}`) |
+| 4 | Demographics | Skip for MVP |
 | 5 | Market stats | Skip for MVP |
-| 6 | Timestamps | Keep integer (works fine) |
-| 7 | Column naming | Keep `lat/lng` (works fine) |
+| 6 | Timestamps | Keep integer |
+| 7 | Column naming | Keep `lat/lng` |
 | 8 | Computed stats | Query-time calculation |
 | 9 | market_share | Skip for MVP |
 | 10 | GlobalNav links | Keep current (Agents/Agencies) |

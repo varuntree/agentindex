@@ -11,12 +11,18 @@ import {
   Clock,
   Target,
   Star,
+  Bed,
+  Bath,
+  Car,
+  Home,
+  Gavel,
 } from "lucide-react";
 import { AgentPhoto } from "@/components/agent/agent-photo";
 import { AgentCard } from "@/components/agent/agent-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
+import { Card, CardContent } from "@/components/ui/card";
 import { SuburbBadge } from "@/components/ui/suburb-badge";
 import { StarRating } from "@/components/ui/star-rating";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -110,12 +116,41 @@ export default async function AgentProfilePage({
 
   const salesPage = Number(sp.page) || 1;
   const salesPerPage = 20;
-  const allSales = agent.sales ?? [];
-  const totalSalesPages = Math.max(1, Math.ceil(allSales.length / salesPerPage));
-  const paginatedSales = allSales.slice(
+  const salesSort = (sp.salesSort as string) || "date";
+  const salesType = (sp.salesType as string) || "all";
+
+  // Filter and sort sales (6.2.4)
+  let filteredSales = agent.sales ?? [];
+  if (salesType !== "all") {
+    filteredSales = filteredSales.filter(
+      (s) => s.propertyType?.toLowerCase() === salesType.toLowerCase()
+    );
+  }
+
+  // Sort sales
+  const sortedSales = [...filteredSales].sort((a, b) => {
+    switch (salesSort) {
+      case "price_high":
+        return (b.salePrice ?? 0) - (a.salePrice ?? 0);
+      case "price_low":
+        return (a.salePrice ?? 0) - (b.salePrice ?? 0);
+      case "date":
+      default:
+        return (
+          new Date(b.saleDate ?? 0).getTime() -
+          new Date(a.saleDate ?? 0).getTime()
+        );
+    }
+  });
+
+  const totalSalesPages = Math.max(1, Math.ceil(sortedSales.length / salesPerPage));
+  const paginatedSales = sortedSales.slice(
     (salesPage - 1) * salesPerPage,
     salesPage * salesPerPage
   );
+
+  // Get unique property types for filter
+  const propertyTypes = [...new Set((agent.sales ?? []).map((s) => s.propertyType).filter(Boolean))];
 
   // Reviews pagination (10/page per spec)
   const reviewPage = Number(sp.reviewPage) || 1;
@@ -205,14 +240,22 @@ export default async function AgentProfilePage({
           </h1>
 
           {agent.agency && (
-            <p className="text-gray-600 mb-2">
+            <div className="flex items-center gap-3 mb-2">
+              {agent.agency.logoUrl && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={agent.agency.logoUrl}
+                  alt={`${agent.agency.name} logo`}
+                  className="h-10 max-w-[100px] object-contain"
+                />
+              )}
               <Link
                 href={`/agency/${agent.agency.slug}`}
-                className="hover:text-voqo-green transition-colors"
+                className="text-gray-600 hover:text-voqo-green transition-colors"
               >
                 {agent.agency.name}
               </Link>
-            </p>
+            </div>
           )}
 
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -359,7 +402,7 @@ export default async function AgentProfilePage({
       <section className="mb-10">
         <h2 className="font-heading text-xl font-bold mb-4">Sales History</h2>
 
-        {allSales.length === 0 ? (
+        {sortedSales.length === 0 ? (
           <p className="text-gray-500">No sales recorded.</p>
         ) : (
           <>

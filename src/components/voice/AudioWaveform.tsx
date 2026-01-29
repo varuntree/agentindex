@@ -14,8 +14,8 @@ export function AudioWaveform({ isSpeaking }: AudioWaveformProps) {
       {[...Array(5)].map((_, i) => (
         <div
           key={i}
-          className={`w-1 bg-primary rounded-full transition-all ${
-            isSpeaking ? 'animate-wave' : 'h-2'
+          className={`w-1 rounded-full transition-all ${
+            isSpeaking ? 'bg-blue-500 animate-wave' : 'bg-green-500 h-2'
           }`}
         />
       ))}

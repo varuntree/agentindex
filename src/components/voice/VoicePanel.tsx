@@ -99,7 +99,7 @@ export function VoicePanel({
     return (
       <div className="bg-white px-6 py-4 rounded-full shadow-lg flex items-center gap-3 border-2 border-black">
         <div
-          className={`w-8 h-8 rounded-full ${isSpeaking ? 'bg-blue-500' : 'bg-primary'} flex items-center justify-center`}
+          className={`w-8 h-8 rounded-full ${isSpeaking ? 'bg-blue-500' : 'bg-green-500'} flex items-center justify-center`}
         >
           {isSpeaking ? (
             <Volume2 className="w-5 h-5 text-white" />

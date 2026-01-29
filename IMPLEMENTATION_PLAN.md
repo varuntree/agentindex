@@ -405,11 +405,14 @@ None. All blocking items resolved.
 - **Feedback:** tracking.ts and track/route.ts already existed. Added tracking calls to VoiceProvider: track start after signed-url, track end on disconnect/error/timeout.
 
 ### TASK-037: Voice state colors
-- **Status:** `pending`
+- **Status:** `completed`
 - **Scope:** Use green (bg-green-500) for listening, blue for speaking
-- **Files:** `src/components/voice/VoicePanel.tsx`
+- **Files:** `src/components/voice/VoicePanel.tsx`, `src/components/voice/AudioWaveform.tsx`
 - **Verification:**
-  - [ ] Visual: colors match spec
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: green for listening, blue for speaking
+- **Feedback:** Updated VoicePanel icon circle and AudioWaveform bars to use green-500 when listening, blue-500 when speaking.
 
 ### TASK-038: Voice listening status
 - **Status:** `pending`

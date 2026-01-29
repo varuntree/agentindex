@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from 'react';
 import { useConversation } from '@elevenlabs/react';
@@ -72,6 +73,30 @@ export function VoiceProvider({
   const [error, setError] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<VoiceMode>(defaultMode);
   const [entityInfo, setEntityInfo] = useState<VoiceEntityInfo | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionStartTimeRef = useRef<number>(0);
+
+  // Track session end/error/timeout
+  const trackSessionEnd = useCallback(async (endStatus: 'completed' | 'error' | 'timeout', errorMsg?: string) => {
+    if (!sessionIdRef.current) return;
+    const durationMs = Date.now() - sessionStartTimeRef.current;
+    try {
+      await fetch('/api/voice/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'end',
+          sessionId: sessionIdRef.current,
+          status: endStatus,
+          durationMs,
+          errorMessage: errorMsg,
+        }),
+      });
+    } catch {
+      // Silent fail - tracking shouldn't break UX
+    }
+    sessionIdRef.current = null;
+  }, []);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -79,6 +104,7 @@ export function VoiceProvider({
     },
     onDisconnect: () => {
       setStatus('idle');
+      trackSessionEnd('completed');
     },
     onMessage: () => {
       // Handle incoming messages (transcript, etc.)
@@ -87,20 +113,22 @@ export function VoiceProvider({
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage || 'An error occurred');
       setStatus('error');
+      trackSessionEnd('error', errorMessage);
     },
   });
 
   // Session timeout
   useEffect(() => {
     if (status === 'connected') {
-      const timeout = setTimeout(() => {
+      const timeout = setTimeout(async () => {
+        await trackSessionEnd('timeout');
         conversation.endSession();
         setStatus('idle');
       }, MAX_SESSION_DURATION);
 
       return () => clearTimeout(timeout);
     }
-  }, [status, conversation]);
+  }, [status, conversation, trackSessionEnd]);
 
   const startSessionInternal = useCallback(
     async (mode: VoiceMode) => {
@@ -136,11 +164,29 @@ export function VoiceProvider({
         }
 
         // Response format: { signedUrl, sessionId, expiresAt, overrides }
-        const { signedUrl, overrides } = data;
+        const { signedUrl, sessionId, overrides } = data;
 
         if (!signedUrl) {
           throw new Error('Voice service not configured');
         }
+
+        // Store session info for tracking
+        sessionIdRef.current = sessionId;
+        sessionStartTimeRef.current = Date.now();
+
+        // Track session start
+        const entitySlug = agentSlug || agencySlug || suburbSlug;
+        fetch('/api/voice/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'start',
+            sessionId,
+            pageType,
+            voiceMode: mode,
+            entitySlug,
+          }),
+        }).catch(() => {/* Silent fail */});
 
         // Select appropriate tools based on mode
         const toolsMap = mode === 'navigator' ? navigatorTools : assistantTools;

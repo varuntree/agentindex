@@ -367,12 +367,14 @@ None. All blocking items resolved.
 ## PHASE 8: Voice Polish
 
 ### TASK-034: Voice CSS animation
-- **Status:** `pending`
+- **Status:** `completed`
 - **Scope:** Rename `voice-bar` to `animate-wave`, use height animation (not scaleY)
 - **Files:** `src/app/globals.css`, `src/components/voice/AudioWaveform.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] Visual: bars animate with height
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: bars animate with height (8px → 24px)
+- **Feedback:** Changed keyframes from scaleY transform to height-based animation. Removed inline animationDelay from component since CSS handles staggering.
 
 ### TASK-035: Remove unused VoiceButton
 - **Status:** `pending`

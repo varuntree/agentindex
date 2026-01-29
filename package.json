@@ -18,6 +18,7 @@
     "pipeline:report": "tsx pipeline/scripts/report.ts",
     "pipeline:retry": "tsx pipeline/scripts/retry.ts",
     "pipeline:dedupe": "tsx pipeline/scripts/dedupe.ts",
+    "pipeline:enrich": "tsx pipeline/scripts/enrich.ts",
     "pipeline:seed-sample": "tsx scripts/seed-sample-data.ts"
   },
   "dependencies": {

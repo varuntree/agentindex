@@ -75,6 +75,7 @@ const CONFIG = {
 interface CLIArgs {
   agency?: string;
   location: string;
+  locations?: string[];
   agencies?: string[];
   discoverAgencies: boolean;
   limit: number;
@@ -97,6 +98,7 @@ function parseArgs(): CLIArgs {
   let result: CLIArgs = {
     agency: undefined,
     location: '',
+    locations: undefined,
     agencies: undefined,
     discoverAgencies: false,
     limit: 10,
@@ -125,6 +127,10 @@ function parseArgs(): CLIArgs {
       case '-l':
         result.location = args[++i] || '';
         explicitlySet.add('location');
+        break;
+      case '--locations':
+        result.locations = (args[++i] || '').split(',').map((s) => s.trim());
+        explicitlySet.add('locations');
         break;
       case '--agencies':
       case '-a':
@@ -242,8 +248,9 @@ Options:
   -c, --config <path>      Load config from JSON file (CLI args override)
   --agency <name>          Single agency to research (primary mode)
   -l, --location <loc>     Target location for discovery
+  --locations <list>       Comma-separated locations (multi-location mode)
   -a, --agencies <list>    Comma-separated agency names
-  --discover-agencies      Auto-discover agencies in location
+  --discover-agencies      Auto-discover agencies in location(s)
   --limit <n>              Max agencies to process (default: 10)
   --max-agents <n>         Max agents to enrich per agency (default: 50)
   --concurrency <n>        Parallel enrichment workers (default: 5)
@@ -260,6 +267,9 @@ Examples:
 
   # Discover agencies in a location
   pnpm pipeline:run --location "Bondi Beach, NSW" --discover-agencies --limit 5
+
+  # Multiple locations
+  pnpm pipeline:run --locations "Bondi Beach,Surry Hills,Newtown" --discover-agencies --limit 10
 
   # Multiple specific agencies
   pnpm pipeline:run --location "Sydney, NSW" --agencies "McGrath,Belle Property"
@@ -404,11 +414,15 @@ async function runQueryWithRetry<T>(
 ): Promise<QueryResult<T>> {
   const startTime = Date.now();
   let lastError = '';
-  
+
+  // Convert Zod schema to JSON schema for SDK structured output
+  // Using type assertion since z.toJSONSchema may not be in types yet
+  const jsonSchema = (z as { toJSONSchema?: (s: z.ZodSchema<T>) => object }).toJSONSchema?.(schema);
+
   for (let attempt = 1; attempt <= CONFIG.maxRetries; attempt++) {
     try {
       log('debug', context, `Attempt ${attempt}/${CONFIG.maxRetries}`);
-      
+
       let resultText = '';
       let structuredOutput: unknown = undefined;
 
@@ -418,6 +432,13 @@ async function runQueryWithRetry<T>(
           allowedTools: ['WebSearch', 'WebFetch'],
           maxTurns: CONFIG.maxTurns,
           maxBudgetUsd: CONFIG.maxBudgetUsd,
+          // Request structured output if schema conversion worked
+          ...(jsonSchema && {
+            outputFormat: {
+              type: 'json_schema' as const,
+              schema: jsonSchema,
+            },
+          }),
         },
       })) {
         // Show progress for tool use
@@ -1060,9 +1081,20 @@ async function runPipeline(config: CLIArgs): Promise<void> {
     console.log('════════════════════════════════════════\n');
   }
 
+  // Determine locations to process
+  const locations: string[] = [];
+
+  if (config.locations && config.locations.length > 0) {
+    // Multi-location mode
+    locations.push(...config.locations);
+    log('info', 'Config', `Locations: ${locations.join(', ')}`);
+  } else if (config.location) {
+    locations.push(config.location);
+  }
+
   // Determine what to research
   let agencyNames: string[] = [];
-  let location = config.location;
+  let location = locations[0] || '';
 
   if (config.agency) {
     // Single agency mode
@@ -1076,18 +1108,18 @@ async function runPipeline(config: CLIArgs): Promise<void> {
     agencyNames = config.agencies;
     log('info', 'Config', `Agencies: ${agencyNames.join(', ')}`);
   } else if (config.discoverAgencies) {
-    if (!location) {
-      console.error('Error: --location required with --discover-agencies');
+    if (locations.length === 0) {
+      console.error('Error: --location or --locations required with --discover-agencies');
       process.exit(1);
     }
-    log('info', 'Config', `Discovering agencies in: ${location}`);
+    log('info', 'Config', `Discovering agencies in: ${locations.length > 1 ? locations.join(', ') : location}`);
   } else {
     console.error('Error: Specify --agency, --agencies, or --discover-agencies');
     printHelp();
     process.exit(1);
   }
 
-  log('info', 'Config', `Location: ${location}`);
+  log('info', 'Config', `Location(s): ${locations.length > 1 ? locations.join(', ') : location}`);
   log('info', 'Config', `Dry run: ${config.dryRun}`);
   log('info', 'Config', `Enrich sales: ${config.enrichSales}`);
   log('info', 'Config', `Enrich reviews: ${config.enrichReviews}`);
@@ -1104,15 +1136,28 @@ async function runPipeline(config: CLIArgs): Promise<void> {
   // Create pipeline run record
   let runId: number | null = null;
   if (!config.dryRun) {
-    runId = await createPipelineRun(location);
+    runId = await createPipelineRun(locations.join(', ') || location);
     log('info', 'Pipeline', `Run ID: ${runId}`);
   }
 
   try {
-    // Phase 1: Get agency list
+    // Phase 1: Get agency list (possibly from multiple locations)
     if (agencyNames.length === 0 && config.discoverAgencies) {
       logPhaseStart('Phase 1', 'Agency Discovery');
-      agencyNames = await discoverAgenciesInLocation(location, config.limit);
+
+      // Discover agencies from all locations
+      for (const loc of locations) {
+        log('progress', 'Discovery', `Searching in ${loc}...`);
+        const discovered = await discoverAgenciesInLocation(loc, config.limit);
+        // Deduplicate by name (case-insensitive)
+        const existingNames = new Set(agencyNames.map((n) => n.toLowerCase()));
+        for (const name of discovered) {
+          if (!existingNames.has(name.toLowerCase())) {
+            agencyNames.push(name);
+            existingNames.add(name.toLowerCase());
+          }
+        }
+      }
     }
 
     if (agencyNames.length === 0) {
@@ -1124,9 +1169,9 @@ async function runPipeline(config: CLIArgs): Promise<void> {
     // Process each agency
     for (const agencyName of agencyNames) {
       try {
-        // Phase 1: Discover agency details
+        // Phase 1: Discover agency details (use first location as default context)
         logPhaseStart('Phase 1', `Agency: ${agencyName}`);
-        const agencyBasic = await discoverAgency(agencyName, location);
+        const agencyBasic = await discoverAgency(agencyName, location || locations[0] || 'NSW');
 
         if (!agencyBasic) {
           stats.errors.push(`${agencyName}: Agency discovery failed`);

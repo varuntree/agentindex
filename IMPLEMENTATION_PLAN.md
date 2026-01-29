@@ -88,7 +88,7 @@ None. All blocking items resolved.
 - [ ] **6.2.7** — Reviews: Add sub-ratings bar chart (Communication, Knowledge, Negotiation, Responsiveness, Marketing)
 - [ ] **6.2.8** — Reviews: Add "Would Hire Again" %, buyer/seller badge, verified badge
 - [ ] **6.2.9** — Reviews: Add pagination (currently shows all, spec: 10/page)
-- [ ] **6.2.10** — Voice button: Change label to "Talk to [FirstName]'s Assistant"
+- [x] **6.2.10** — Voice button: Change label to "Talk to [FirstName]'s Assistant"
 - [ ] **6.2.11** — Stats: Rename "Total Sales" to "Properties Sold (12mo)", add "Sale Price Accuracy"
 - [ ] **6.2.12** — Similar agents heading: "Similar Agents in [Primary Suburb]", add review count to cards
 

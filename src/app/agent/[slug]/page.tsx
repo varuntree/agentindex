@@ -256,7 +256,7 @@ export default async function AgentProfilePage({
             )}
             <Button variant="primary" size="sm">
               <MessageCircle className="w-4 h-4 mr-1.5" />
-              Talk to Assistant
+              Talk to {agent.firstName}&apos;s Assistant
             </Button>
           </div>
         </div>

@@ -117,6 +117,16 @@ export default async function AgentProfilePage({
     salesPage * salesPerPage
   );
 
+  // Reviews pagination (10/page per spec)
+  const reviewPage = Number(sp.reviewPage) || 1;
+  const reviewsPerPage = 10;
+  const allReviews = agent.reviews ?? [];
+  const totalReviewPages = Math.max(1, Math.ceil(allReviews.length / reviewsPerPage));
+  const paginatedReviews = allReviews.slice(
+    (reviewPage - 1) * reviewsPerPage,
+    reviewPage * reviewsPerPage
+  );
+
   const suburbIds = (agent.suburbs ?? [])
     .map((s) => s.suburb?.id)
     .filter((id): id is number => id != null);
@@ -402,7 +412,7 @@ export default async function AgentProfilePage({
       <section className="mb-10">
         <h2 className="font-heading text-xl font-bold mb-4">Reviews</h2>
 
-        {(agent.reviews ?? []).length === 0 ? (
+        {allReviews.length === 0 ? (
           <p className="text-gray-500">No reviews yet.</p>
         ) : (
           <>
@@ -413,15 +423,15 @@ export default async function AgentProfilePage({
                 showValue
               />
               <span className="text-gray-500 text-sm">
-                ({agent.ratingsCount ?? agent.reviews.length} review
-                {(agent.ratingsCount ?? agent.reviews.length) !== 1
+                ({agent.ratingsCount ?? allReviews.length} review
+                {(agent.ratingsCount ?? allReviews.length) !== 1
                   ? "s"
                   : ""})
               </span>
             </div>
 
             <div className="space-y-4">
-              {agent.reviews.map((review) => (
+              {paginatedReviews.map((review) => (
                 <div
                   key={review.id}
                   className="bg-white border-2 border-black rounded-lg p-5"
@@ -447,6 +457,15 @@ export default async function AgentProfilePage({
                 </div>
               ))}
             </div>
+
+            {totalReviewPages > 1 && (
+              <Pagination
+                currentPage={reviewPage}
+                totalPages={totalReviewPages}
+                basePath={`/agent/${slug}?reviewPage=`}
+                className="mt-4 justify-center"
+              />
+            )}
           </>
         )}
       </section>

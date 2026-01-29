@@ -87,7 +87,7 @@ None. All blocking items resolved.
 - [ ] **6.2.6** — Sales: Add property images, beds/baths/parking icons, sale method badge
 - [ ] **6.2.7** — Reviews: Add sub-ratings bar chart (Communication, Knowledge, Negotiation, Responsiveness, Marketing)
 - [ ] **6.2.8** — Reviews: Add "Would Hire Again" %, buyer/seller badge, verified badge
-- [ ] **6.2.9** — Reviews: Add pagination (currently shows all, spec: 10/page)
+- [x] **6.2.9** — Reviews: Add pagination (currently shows all, spec: 10/page)
 - [x] **6.2.10** — Voice button: Change label to "Talk to [FirstName]'s Assistant"
 - [x] **6.2.11** — Stats: Rename "Total Sales" to "Properties Sold (12mo)", add "Sale Price Accuracy"
 - [x] **6.2.12** — Similar agents heading: "Similar Agents in [Primary Suburb]", add review count to cards
@@ -100,9 +100,9 @@ None. All blocking items resolved.
 - [x] **6.3.2** — Header: Add YoY price change indicators (+X% arrow) ✅ (verified present)
 - [x] **6.3.3** — Header: Add Avg Days on Market, Total Sales 12mo, Clearance Rate stats ✅ (6 stats present)
 - [x] **6.3.4** — Header: Add Voice button ("Help me find an agent in [Suburb]")
-- [ ] **6.3.5** — Add Suburb Stats section: market overview text paragraph (150 words)
-- [ ] **6.3.6** — Add Suburb Stats section: median price by property type table (Houses/Apartments/Townhouses/Land)
-- [ ] **6.3.7** — Add Suburb Stats section: 3 notable recent sales with cards
+- [x] **6.3.5** — Add Suburb Stats section: market overview text paragraph (150 words) ✅ (uses `getSuburbPricesByType()`, `getNotableSalesInSuburb()` from queries.ts)
+- [x] **6.3.6** — Add Suburb Stats section: median price by property type table (Houses/Apartments/Townhouses/Land) ✅
+- [x] **6.3.7** — Add Suburb Stats section: 3 notable recent sales with cards ✅
 - [x] **6.3.8** — Header: Add agent count subtitle ("X real estate agents" below h1)
 
 **Playwright verify:** Navigate to `/agents/nsw/bondi-beach-nsw`, screenshot, verify stats section present.

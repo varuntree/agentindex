@@ -12,7 +12,6 @@ const compat = new FlatCompat({
 const eslintConfig = [
   {
     ignores: [
-      "agent-ralph-ui/**",
       "agent-ralph/**",
       "ralph/**",
       "node_modules/**",

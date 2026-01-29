@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "pipeline", "agent-ralph-ui", "agent-ralph-ui/**"]
+  "exclude": ["node_modules", "pipeline"]
 }

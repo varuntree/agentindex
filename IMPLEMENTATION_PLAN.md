@@ -377,12 +377,14 @@ None. All blocking items resolved.
 - **Feedback:** Changed keyframes from scaleY transform to height-based animation. Removed inline animationDelay from component since CSS handles staggering.
 
 ### TASK-035: Remove unused VoiceButton
-- **Status:** `pending`
+- **Status:** `completed`
 - **Scope:** Delete VoiceButton.tsx if VoicePanel handles button rendering
 - **Files:** `src/components/voice/VoiceButton.tsx`
 - **Verification:**
-  - [ ] `pnpm build` passes
-  - [ ] No import errors
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] No import errors
+- **Feedback:** VoiceButton was unused — VoicePanel renders buttons inline. Deleted file and removed export from index.ts.
 
 ### TASK-036: Voice usage tracking
 - **Status:** `pending`

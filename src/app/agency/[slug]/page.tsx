@@ -23,6 +23,7 @@ import {
 import { agencyBreadcrumbJsonLd, agencyJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
 import { agencyMetadata } from "@/lib/seo/metadata";
 import { VoiceContextSetterWrapper } from "@/components/voice/VoiceContextSetterWrapper";
+import { AgencyVoiceButtonWrapper } from "@/components/voice/AgencyVoiceButtonWrapper";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -199,6 +200,7 @@ export default async function AgencyProfilePage({ params }: PageProps) {
               Website
             </a>
           )}
+          <AgencyVoiceButtonWrapper agencyName={agency.name} />
         </div>
 
         {fullAddress && (

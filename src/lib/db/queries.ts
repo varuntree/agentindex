@@ -284,6 +284,58 @@ export interface AgencyEnrichment {
   topSuburbs: { name: string; state: string; agentCount: number }[];
 }
 
+export interface AgencyRecentSale {
+  id: number;
+  address: string;
+  suburb: string | null;
+  propertyType: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  salePrice: number | null;
+  saleDate: string | null;
+  agentId: number;
+  agentName: string;
+}
+
+export async function getAgencyRecentSales(agencyId: number, limit = 20): Promise<AgencyRecentSale[]> {
+  const rows = sqliteDb
+    .prepare(
+      `SELECT s.id, s.property_address, s.suburb, s.property_type,
+              s.bedrooms, s.bathrooms, s.sale_price, s.sale_date,
+              a.id as agent_id, a.full_name as agent_name
+       FROM sales s
+       INNER JOIN agents a ON s.agent_id = a.id
+       WHERE a.agency_id = ?
+       ORDER BY s.sale_date DESC
+       LIMIT ?`
+    )
+    .all(agencyId, limit) as {
+    id: number;
+    property_address: string;
+    suburb: string | null;
+    property_type: string | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    sale_price: number | null;
+    sale_date: string | null;
+    agent_id: number;
+    agent_name: string;
+  }[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    address: r.property_address,
+    suburb: r.suburb,
+    propertyType: r.property_type,
+    bedrooms: r.bedrooms,
+    bathrooms: r.bathrooms,
+    salePrice: r.sale_price,
+    saleDate: r.sale_date,
+    agentId: r.agent_id,
+    agentName: r.agent_name,
+  }));
+}
+
 export async function getAgencyEnrichment(agencyId: number): Promise<AgencyEnrichment> {
   // Calculate average sale price from all agents in agency
   const priceResult = sqliteDb

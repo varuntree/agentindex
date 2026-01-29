@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAgencyBySlug, getAgencyEnrichment } from '@/lib/db/queries';
+import { getAgencyBySlug, getAgencyEnrichment, getAgencyRecentSales } from '@/lib/db/queries';
 import { success, notFound, serverError } from '@/lib/api/response';
 import { cacheHeaders, CACHE_PROFILE } from '@/lib/api/cache';
 
@@ -15,13 +15,17 @@ export async function GET(
       return notFound('Agency not found');
     }
 
-    // Get enrichment data (avgSalePrice, topSuburbs)
-    const enrichment = await getAgencyEnrichment(agency.id);
+    // Get enrichment data (avgSalePrice, topSuburbs) and recent sales
+    const [enrichment, recentSales] = await Promise.all([
+      getAgencyEnrichment(agency.id),
+      getAgencyRecentSales(agency.id, 20),
+    ]);
 
     const response = success({
       ...agency,
       avgSalePrice: enrichment.avgSalePrice,
       topSuburbs: enrichment.topSuburbs,
+      recentSales,
     });
     const headers = cacheHeaders(CACHE_PROFILE);
     for (const [key, value] of Object.entries(headers)) {

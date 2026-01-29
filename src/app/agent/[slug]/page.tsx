@@ -273,7 +273,7 @@ export default async function AgentProfilePage({
           <StatCard
             icon={BarChart3}
             value={formatNumber(agent.totalSalesCount ?? 0)}
-            label="Total Sales"
+            label="Properties Sold (12mo)"
           />
           <StatCard
             icon={DollarSign}

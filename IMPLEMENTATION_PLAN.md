@@ -217,71 +217,79 @@ None. All blocking items resolved.
   - [ ] `pnpm build` passes
   - [ ] Chips toggle and filter agent list
 
-### TASK-019: Button border spec
-- **Status:** `pending`
+### TASK-019: Button border spec ✓
+- **Status:** `completed`
 - **Scope:** Change button border from 2px to 3px per spec
 - **Files:** `src/components/ui/button.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Visual: border is 3px
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: border is 3px
+- **Feedback:** Changed border-2 → border-[3px] for primary, secondary, destructive variants.
 
-### TASK-020: Pagination border fix
-- **Status:** `pending`
+### TASK-020: Pagination border fix ✓
+- **Status:** `completed`
 - **Scope:** Fix inactive pagination buttons to use border-2 (not border-1)
 - **Files:** `src/components/ui/pagination.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Visual: all buttons have consistent 2px border
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: all buttons have consistent 2px border
+- **Feedback:** Changed inactive buttons from border border-gray-300 → border-2 border-black.
 
-### TASK-021: Skeleton border fix
-- **Status:** `pending`
+### TASK-021: Skeleton border fix ✓
+- **Status:** `completed`
 - **Scope:** Change skeleton border from gray-200 to black per spec
 - **Files:** `src/components/ui/skeleton.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Visual: skeleton has black border
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: skeleton has black border
+- **Feedback:** Changed SkeletonCard border-gray-200 → border-black.
 
-### TASK-022: AgentCard icons
-- **Status:** `pending`
+### TASK-022: AgentCard icons ✓
+- **Status:** `completed`
 - **Scope:** Add Home/TrendingUp icons for stats, use 3-col grid layout
 - **Files:** `src/components/agent/agent-card.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Visual: icons render, 3-col layout
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: icons render, 3-col layout
+- **Feedback:** Already implemented. Home, TrendingUp, MapPin icons with grid-cols-3.
 
-### TASK-023: AgentCard review count
-- **Status:** `pending`
+### TASK-023: AgentCard review count ✓
+- **Status:** `completed`
 - **Scope:** Add review count to rating display ("4.2 (24)" format)
 - **Files:** `src/components/agent/agent-card.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Visual: rating shows count in parentheses
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: rating shows count in parentheses
+- **Feedback:** Already implemented. Shows ({ratingsCount}) after star rating.
 
-### TASK-024: AgentCard location stat
-- **Status:** `pending`
+### TASK-024: AgentCard location stat ✓
+- **Status:** `completed`
 - **Scope:** Add state/location stat column per spec
 - **Files:** `src/components/agent/agent-card.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] `pnpm build` passes
-  - [ ] Visual: location stat visible
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Visual: location stat visible
+- **Feedback:** Already implemented. MapPin icon with state from primary suburb.
 
 ---
 
 ## PHASE 3: Data Pipeline
 
-### TASK-025: Pipeline config file
-- **Status:** `pending`
+### TASK-025: Pipeline config file ✓
+- **Status:** `completed`
 - **Scope:** Add `pipeline-config.json` support with locations[], enrichment{}, rate_limits{}, quality{}
 - **Files:** `pipeline/config/schema.ts`, `pipeline/scripts/pipeline.ts`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] Config file loads and validates
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] Config file loads and validates
+- **Feedback:** Created Zod schema with full validation. Added --config flag to CLI. Config merges with CLI args (CLI overrides). Tracks explicit CLI args to avoid overwriting user intent.
 
 ### TASK-026: Pipeline CLI utilities
 - **Status:** `pending`

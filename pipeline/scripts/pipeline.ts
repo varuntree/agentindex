@@ -53,6 +53,7 @@ import {
   type TeamDiscoveryInput,
   type AgentEnrichmentInput,
 } from '../agents/skills';
+import { loadPipelineConfig, type PipelineConfig } from '../config/schema';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -84,11 +85,16 @@ interface CLIArgs {
   dryRun: boolean;
   json: boolean;
   verbose: boolean;
+  configPath?: string;
 }
 
 function parseArgs(): CLIArgs {
   const args = process.argv.slice(2);
-  const result: CLIArgs = {
+
+  // Track which flags were explicitly set on CLI
+  const explicitlySet = new Set<string>();
+
+  let result: CLIArgs = {
     agency: undefined,
     location: '',
     agencies: undefined,
@@ -101,39 +107,53 @@ function parseArgs(): CLIArgs {
     dryRun: false,
     json: false,
     verbose: false,
+    configPath: undefined,
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     switch (arg) {
+      case '--config':
+      case '-c':
+        result.configPath = args[++i] || '';
+        break;
       case '--agency':
         result.agency = args[++i] || '';
+        explicitlySet.add('agency');
         break;
       case '--location':
       case '-l':
         result.location = args[++i] || '';
+        explicitlySet.add('location');
         break;
       case '--agencies':
       case '-a':
         result.agencies = (args[++i] || '').split(',').map((s) => s.trim());
+        explicitlySet.add('agencies');
         break;
       case '--discover-agencies':
         result.discoverAgencies = true;
+        explicitlySet.add('discoverAgencies');
         break;
       case '--limit':
         result.limit = parseInt(args[++i] || '10', 10);
+        explicitlySet.add('limit');
         break;
       case '--max-agents':
         result.maxAgents = parseInt(args[++i] || '50', 10);
+        explicitlySet.add('maxAgents');
         break;
       case '--concurrency':
         result.concurrency = parseInt(args[++i] || '5', 10);
+        explicitlySet.add('concurrency');
         break;
       case '--no-sales':
         result.enrichSales = false;
+        explicitlySet.add('enrichSales');
         break;
       case '--no-reviews':
         result.enrichReviews = false;
+        explicitlySet.add('enrichReviews');
         break;
       case '--dry-run':
         result.dryRun = true;
@@ -152,7 +172,61 @@ function parseArgs(): CLIArgs {
     }
   }
 
+  // If config file provided, load and merge (CLI args override config)
+  if (result.configPath) {
+    const config = loadPipelineConfig(result.configPath);
+    result = mergeConfigWithCLI(result, config, explicitlySet);
+  }
+
   return result;
+}
+
+/**
+ * Merge config file values with CLI args. CLI args take precedence.
+ */
+function mergeConfigWithCLI(
+  cli: CLIArgs,
+  config: PipelineConfig,
+  explicitlySet: Set<string>
+): CLIArgs {
+  const merged = { ...cli };
+
+  // Use config.locations if no --location specified
+  if (!explicitlySet.has('location') && config.locations.length > 0) {
+    const loc = config.locations[0];
+    merged.location = `${loc.suburb}, ${loc.state}`;
+  }
+
+  // Use config.agencies.mode if no --discover-agencies or --agencies specified
+  if (!explicitlySet.has('discoverAgencies') && !explicitlySet.has('agencies')) {
+    if (config.agencies.mode === 'discover') {
+      merged.discoverAgencies = true;
+    } else if (config.agencies.mode === 'specified' && config.agencies.list.length > 0) {
+      merged.agencies = config.agencies.list;
+    }
+  }
+
+  // Use config.agencies.limit if no --limit specified
+  if (!explicitlySet.has('limit')) {
+    merged.limit = config.agencies.limit;
+  }
+
+  // Use config.rate_limits.max_concurrent_agents for concurrency if not set
+  if (!explicitlySet.has('concurrency')) {
+    merged.concurrency = config.rate_limits.max_concurrent_agents;
+  }
+
+  // Use config.enrichment.sales for --no-sales default
+  if (!explicitlySet.has('enrichSales')) {
+    merged.enrichSales = config.enrichment.sales;
+  }
+
+  // Use config.enrichment.reviews for --no-reviews default
+  if (!explicitlySet.has('enrichReviews')) {
+    merged.enrichReviews = config.enrichment.reviews;
+  }
+
+  return merged;
 }
 
 function printHelp(): void {
@@ -162,8 +236,10 @@ AgentIndex Data Pipeline v2
 Usage:
   pnpm pipeline:run --agency "Agency Name" [options]
   pnpm pipeline:run --location "Suburb, STATE" --discover-agencies [options]
+  pnpm pipeline:run --config pipeline-config.json [options]
 
 Options:
+  -c, --config <path>      Load config from JSON file (CLI args override)
   --agency <name>          Single agency to research (primary mode)
   -l, --location <loc>     Target location for discovery
   -a, --agencies <list>    Comma-separated agency names
@@ -187,6 +263,12 @@ Examples:
 
   # Multiple specific agencies
   pnpm pipeline:run --location "Sydney, NSW" --agencies "McGrath,Belle Property"
+
+  # Using config file
+  pnpm pipeline:run --config pipeline-config.json
+
+  # Config file with CLI overrides
+  pnpm pipeline:run --config pipeline-config.json --limit 5 --no-reviews
 `);
 }
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Home, Building2, Users, MapPin, Clock, TrendingUp, BarChart3, Mic } from "lucide-react";
+import { Home, Building2, Users, MapPin, Clock, TrendingUp, BarChart3 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -18,6 +18,7 @@ import { formatNumber, formatCurrency } from "@/lib/utils/format";
 import { breadcrumbJsonLd, suburbJsonLd, safeJsonLd } from "@/lib/seo/jsonld";
 import { suburbMetadata } from "@/lib/seo/metadata";
 import { VoiceContextSetterWrapper } from "@/components/voice/VoiceContextSetterWrapper";
+import { SuburbVoiceButtonWrapper } from "@/components/voice/SuburbVoiceButtonWrapper";
 
 const BASE_URL = "https://agentindex.com.au";
 
@@ -188,18 +189,23 @@ export default async function SuburbPage({
 
       {/* Header with postcode */}
       <div className="mb-6">
-        <h1 className="font-heading text-3xl md:text-4xl font-black">
-          Real Estate Agents in {suburb.name}, {state.toUpperCase()} {suburb.postcode}
-        </h1>
-        {marketStats.priceChangeYoy !== null && (
-          <p className="text-sm text-gray-600 mt-2 flex items-center gap-1">
-            <TrendingUp className={`w-4 h-4 ${marketStats.priceChangeYoy >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-            <span className={marketStats.priceChangeYoy >= 0 ? 'text-green-600' : 'text-red-600'}>
-              {marketStats.priceChangeYoy >= 0 ? '+' : ''}{marketStats.priceChangeYoy.toFixed(1)}%
-            </span>
-            <span>median price change (YoY)</span>
-          </p>
-        )}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-3xl md:text-4xl font-black">
+              Real Estate Agents in {suburb.name}, {state.toUpperCase()} {suburb.postcode}
+            </h1>
+            {marketStats.priceChangeYoy !== null && (
+              <p className="text-sm text-gray-600 mt-2 flex items-center gap-1">
+                <TrendingUp className={`w-4 h-4 ${marketStats.priceChangeYoy >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                <span className={marketStats.priceChangeYoy >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {marketStats.priceChangeYoy >= 0 ? '+' : ''}{marketStats.priceChangeYoy.toFixed(1)}%
+                </span>
+                <span>median price change (YoY)</span>
+              </p>
+            )}
+          </div>
+          <SuburbVoiceButtonWrapper suburbName={suburb.name} />
+        </div>
       </div>
 
       {/* Market stats */}

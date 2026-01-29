@@ -99,7 +99,7 @@ None. All blocking items resolved.
 - [x] **6.3.1** — Header: Add postcode in heading ✅ (verified present)
 - [x] **6.3.2** — Header: Add YoY price change indicators (+X% arrow) ✅ (verified present)
 - [x] **6.3.3** — Header: Add Avg Days on Market, Total Sales 12mo, Clearance Rate stats ✅ (6 stats present)
-- [ ] **6.3.4** — Header: Add Voice button ("Help me find an agent in [Suburb]")
+- [x] **6.3.4** — Header: Add Voice button ("Help me find an agent in [Suburb]")
 - [ ] **6.3.5** — Add Suburb Stats section: market overview text paragraph (150 words)
 - [ ] **6.3.6** — Add Suburb Stats section: median price by property type table (Houses/Apartments/Townhouses/Land)
 - [ ] **6.3.7** — Add Suburb Stats section: 3 notable recent sales with cards

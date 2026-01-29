@@ -95,6 +95,14 @@ ai_docs/                    # AI integration docs
 
 ## Build Issues & Fixes
 
+### Build Troubleshooting Order
+When build fails, check in this order:
+1. **Dependencies installed?** → `pnpm install`
+2. **Stale cache?** → `rm -rf .next && pnpm build`
+3. **Lockfile corrupted?** → `rm -rf node_modules pnpm-lock.yaml && pnpm install`
+4. **Version mismatch?** → Check Next.js/@next/swc versions match
+5. **Nuclear option** → Full clean rebuild (see below)
+
 ### NODE_ENV Must Be Standard
 - Only use `development`, `production`, or `test` for NODE_ENV
 - Non-standard values cause: webpack chunk ID mismatches, corrupted build cache, race conditions in output tracing
@@ -115,10 +123,23 @@ ai_docs/                    # AI integration docs
 - Even if they don't use hooks directly, React APIs require client context
 - Fix: Add `'use client'` at top of file
 
+### Missing node_modules
+- **Always check before build**: `pnpm install` if `node_modules` missing
+- Symptoms: `sh: next: command not found`, `Local package.json exists, but node_modules missing`
+- After git clone or lockfile changes, reinstall deps first
+
 ### Corrupted .next Cache
 - Strange webpack/bundling errors often caused by stale cache
-- Symptoms: Missing chunks, module not found, inconsistent builds
+- Symptoms: Missing chunks, module not found, inconsistent builds, **ENOENT for `.nft.json` files**
+- Example: `Error: ENOENT: no such file or directory, open '.../_not-found/page.js.nft.json'`
 - Fix: `rm -rf .next && pnpm build`
+- **Always try clean rebuild first** when builds fail unexpectedly
+
+### Edge Runtime Warning (Expected)
+- Warning: `Using edge runtime on a page currently disables static generation for that page`
+- This is **not an error** — expected for `/api/og` route (OG image generation with `@vercel/og`)
+- Edge runtime is correct for image generation APIs
+- Do not try to "fix" this warning
 
 ### pnpm-workspace.yaml Syntax
 - Must be valid YAML with proper structure

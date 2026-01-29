@@ -457,7 +457,7 @@ export default async function AgentProfilePage({
       {similarAgents.length > 0 && (
         <section className="mb-10">
           <h2 className="font-heading text-xl font-bold mb-4">
-            Similar Agents
+            Similar Agents in {agent.suburbs?.[0]?.suburb?.name ?? "Your Area"}
           </h2>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x">
             {similarAgents.map((sa) => {

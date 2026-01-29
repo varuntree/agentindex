@@ -15,6 +15,13 @@
       "when": 1769648355183,
       "tag": "0001_green_fat_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1769649122117,
+      "tag": "0002_black_scourge",
+      "breakpoints": true
     }
   ]
 }

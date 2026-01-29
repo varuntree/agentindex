@@ -346,7 +346,7 @@ async function seedAgents() {
         await db.insert(agentSuburbs).values({
           agentId,
           suburbId,
-          isPrimary: i === 0 ? 1 : 0,
+          isPrimary: i === 0,
         });
       }
     }

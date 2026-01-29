@@ -164,7 +164,7 @@ export const agentSuburbs = sqliteTable(
     suburbId: integer("suburb_id")
       .notNull()
       .references(() => suburbs.id, { onDelete: "cascade" }),
-    isPrimary: integer("is_primary").default(0),
+    isPrimary: integer("is_primary", { mode: "boolean" }).default(false),
     salesCount: integer("sales_count").default(0),
   },
   (table) => [
@@ -217,7 +217,7 @@ export const sales = sqliteTable(
     index("sales_suburb_idx").on(table.suburb),
     index("sales_sale_date_idx").on(table.saleDate),
     index("sales_property_type_idx").on(table.propertyType),
-    index("sales_agent_sale_date_idx").on(table.agentId, table.saleDate),
+    index("sales_agent_date_idx").on(table.agentId, table.saleDate),
   ]
 );
 

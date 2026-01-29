@@ -15,12 +15,8 @@ export function AudioWaveform({ isSpeaking }: AudioWaveformProps) {
         <div
           key={i}
           className={`w-1 bg-primary rounded-full transition-all ${
-            isSpeaking ? 'voice-bar' : ''
+            isSpeaking ? 'animate-wave' : 'h-2'
           }`}
-          style={{
-            height: isSpeaking ? undefined : '8px',
-            animationDelay: isSpeaking ? `${i * 0.15}s` : undefined,
-          }}
         />
       ))}
     </div>

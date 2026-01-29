@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Ralph Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="header">
+    <div class="header-left">
+      <h1>🤖 Agent Ralph</h1>
+      <span id="status" class="status">Connecting...</span>
+    </div>
+    <div class="header-center">
+      <span id="progress">-</span>
+    </div>
+    <div class="header-right">
+      <button id="stopBtn" class="btn btn-danger" disabled>Stop</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="mainPanel" class="panel">
+      <div class="panel-header">Main Agent</div>
+      <div id="mainLog" class="log-container"></div>
+    </div>
+
+    <aside id="sidebar">
+      <div class="panel-header">Sub-agents <span id="subagentCount">(0)</span></div>
+      <div id="subagentList" class="subagent-list"></div>
+    </aside>
+  </main>
+
+  <div id="subagentModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span id="modalTitle">Sub-agent</span>
+        <button id="closeModal" class="btn-close">×</button>
+      </div>
+      <div id="modalLog" class="log-container"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

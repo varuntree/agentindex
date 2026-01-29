@@ -1,0 +1,7 @@
+{
+  "plan": 1,
+  "build": 5,
+  "cycles": 0,
+  "stopOnZeroTasks": true,
+  "port": 3001
+}

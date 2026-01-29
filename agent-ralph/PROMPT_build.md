@@ -169,6 +169,20 @@ Update the task in `IMPLEMENTATION_PLAN.md`:
 
 ---
 
+## Step 6b: Check Remaining Tasks
+
+After completing the task, count remaining `pending` tasks in `IMPLEMENTATION_PLAN.md`.
+
+**If ZERO pending tasks remain**, output this exact signal:
+
+```
+CYCLE_SIGNAL: ZERO_PENDING_TASKS
+```
+
+This tells the loop orchestrator to stop the build cycle. Only output this when there are truly no more pending tasks.
+
+---
+
 ## Step 7: Commit & Push
 
 ```bash

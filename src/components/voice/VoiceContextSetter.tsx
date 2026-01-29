@@ -31,7 +31,7 @@ export function VoiceContextSetter({ name, assistantLabel }: VoiceContextSetterP
   useEffect(() => {
     const info: VoiceEntityInfo = { name };
     if (assistantLabel) {
-      info.assistantLabel = assistantLabel;
+      info.assistant_label = assistantLabel;
     }
     setEntityInfo(info);
 

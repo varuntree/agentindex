@@ -151,12 +151,12 @@ export function VoiceProvider({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            pageType,
-            agentSlug,
-            agencySlug,
-            suburbSlug,
-            voiceMode: mode,
-            contextData: {
+            page_type: pageType,
+            agent_slug: agentSlug,
+            agency_slug: agencySlug,
+            suburb_slug: suburbSlug,
+            voice_mode: mode,
+            context_data: {
               agent: agentData,
               agency: agencyData,
               suburb: suburbData,

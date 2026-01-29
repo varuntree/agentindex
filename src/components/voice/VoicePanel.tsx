@@ -19,8 +19,8 @@ interface VoicePanelProps {
  */
 function getAssistantLabel(pageType: PageType, entityInfo: VoiceEntityInfo | null): string {
   // Use custom label if provided
-  if (entityInfo?.assistantLabel) {
-    return entityInfo.assistantLabel;
+  if (entityInfo?.assistant_label) {
+    return entityInfo.assistant_label;
   }
 
   // Build default label from entity name and page type

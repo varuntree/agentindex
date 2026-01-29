@@ -45,40 +45,40 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = (await request.json().catch(() => null)) as VoiceSessionRequest | null;
-    if (!body || !body.pageType) {
+    if (!body || !body.page_type) {
       return NextResponse.json(
         {
           success: false,
-          error: { message: 'pageType is required', code: 'BAD_REQUEST' },
+          error: { message: 'page_type is required', code: 'BAD_REQUEST' },
         },
         { status: 400 }
       );
     }
 
     const validPageTypes = ['home', 'agent', 'agency', 'suburb'];
-    if (!validPageTypes.includes(body.pageType)) {
+    if (!validPageTypes.includes(body.page_type)) {
       return NextResponse.json(
         {
           success: false,
-          error: { message: 'Invalid pageType', code: 'BAD_REQUEST' },
+          error: { message: 'Invalid page_type', code: 'BAD_REQUEST' },
         },
         { status: 400 }
       );
     }
 
     const validModes = ['navigator', 'assistant'];
-    if (body.voiceMode && !validModes.includes(body.voiceMode)) {
+    if (body.voice_mode && !validModes.includes(body.voice_mode)) {
       return NextResponse.json(
         {
           success: false,
-          error: { message: 'Invalid voiceMode', code: 'BAD_REQUEST' },
+          error: { message: 'Invalid voice_mode', code: 'BAD_REQUEST' },
         },
         { status: 400 }
       );
     }
 
     // Validate slug lengths to prevent abuse
-    const slugFields = [body.agentSlug, body.agencySlug, body.suburbSlug].filter(Boolean);
+    const slugFields = [body.agent_slug, body.agency_slug, body.suburb_slug].filter(Boolean);
     if (slugFields.some((s) => s && s.length > 200)) {
       return NextResponse.json(
         { success: false, error: { message: 'Invalid slug', code: 'BAD_REQUEST' } },
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const voiceMode = body.voiceMode || 'navigator';
+    const voiceMode = body.voice_mode || 'navigator';
     let systemPrompt = '';
     let variables: Record<string, unknown> = {};
     let firstMessage = '';
@@ -98,9 +98,9 @@ export async function POST(request: NextRequest) {
 
       // Get site stats for context
       const stats = await getSiteStats();
-      const currentSlug = body.agentSlug || body.agencySlug || body.suburbSlug || '';
+      const currentSlug = body.agent_slug || body.agency_slug || body.suburb_slug || '';
       variables = {
-        current_page: body.pageType,
+        current_page: body.page_type,
         current_slug: currentSlug,
         total_agents: stats.totalAgents,
         total_suburbs: stats.totalSuburbs,
@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
       };
     } else {
       // Assistant mode - page-specific
-      if (body.pageType === 'agent') {
-        const agentData = await fetchAgentContext(body.agentSlug);
+      if (body.page_type === 'agent') {
+        const agentData = await fetchAgentContext(body.agent_slug);
         if (!agentData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Agent not found' },
@@ -119,18 +119,18 @@ export async function POST(request: NextRequest) {
 
         const agentContext = buildAgentContext(agentData);
         systemPrompt = buildAgentSystemPrompt(
-          agentData.fullName,
-          agentData.agencyName,
+          agentData.full_name,
+          agentData.agency_name,
           agentContext
         );
-        firstMessage = buildAgentFirstMessage(agentData.fullName);
+        firstMessage = buildAgentFirstMessage(agentData.full_name);
         variables = {
-          agent_name: agentData.fullName,
-          agency_name: agentData.agencyName,
+          agent_name: agentData.full_name,
+          agency_name: agentData.agency_name,
           agent_context: agentContext,
         };
-      } else if (body.pageType === 'agency') {
-        const agencyData = await fetchAgencyContext(body.agencySlug);
+      } else if (body.page_type === 'agency') {
+        const agencyData = await fetchAgencyContext(body.agency_slug);
         if (!agencyData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Agency not found' },
@@ -145,8 +145,8 @@ export async function POST(request: NextRequest) {
           agency_name: agencyData.name,
           agency_context: agencyContext,
         };
-      } else if (body.pageType === 'suburb') {
-        const suburbData = await fetchSuburbContext(body.suburbSlug);
+      } else if (body.page_type === 'suburb') {
+        const suburbData = await fetchSuburbContext(body.suburb_slug);
         if (!suburbData) {
           return NextResponse.json(
             { signedUrl: null, error: 'Suburb not found' },
@@ -230,24 +230,24 @@ async function fetchAgentContext(slug?: string): Promise<AgentVoiceContext | nul
   };
 
   return {
-    fullName: agent.fullName,
-    agencyName: agent.agency?.name ?? 'Independent Agent',
-    yearsExperience: agent.yearsActive ?? undefined,
+    full_name: agent.fullName,
+    agency_name: agent.agency?.name ?? 'Independent Agent',
+    years_experience: agent.yearsActive ?? undefined,
     languages: parseJsonArray(agent.languagesSpoken),
     specializations: parseJsonArray(agent.specializations),
     suburbs: agent.suburbs?.map((as) => as.suburb?.name).filter(Boolean) as string[] | undefined,
-    salesCount12mo: agent.totalSalesCount ?? undefined,
-    avgSalePrice12mo: agent.medianSalePrice ?? undefined,
-    medianDom12mo: agent.averageDaysOnMarket ?? undefined,
+    sales_count_12mo: agent.totalSalesCount ?? undefined,
+    avg_sale_price_12mo: agent.medianSalePrice ?? undefined,
+    median_dom_12mo: agent.averageDaysOnMarket ?? undefined,
     rating: agent.ratingsAverage ?? undefined,
-    reviewCount: agent.ratingsCount ?? undefined,
-    recentSales: agent.sales?.slice(0, 5).map((s) => ({
+    review_count: agent.ratingsCount ?? undefined,
+    recent_sales: agent.sales?.slice(0, 5).map((s) => ({
       address: s.propertyAddress,
-      propertyType: s.propertyType ?? 'property',
+      property_type: s.propertyType ?? 'property',
       bedrooms: s.bedrooms ?? 0,
       bathrooms: s.bathrooms ?? 0,
       price: s.salePrice ?? 0,
-      soldDate: s.saleDate ?? '',
+      sold_date: s.saleDate ?? '',
     })),
     bio: agent.bio ?? undefined,
   };
@@ -273,13 +273,13 @@ async function fetchAgencyContext(slug?: string): Promise<AgencyVoiceContext | n
   return {
     name: agency.name,
     locations: locations.length > 0 ? locations : undefined,
-    agentCount: agency.totalAgents ?? undefined,
-    salesCount12mo: agency.totalSalesCount ?? undefined,
-    totalVolume12mo: agency.totalSalesVolume ?? undefined,
-    topAgents: agency.agents?.slice(0, 5).map((a) => ({
-      fullName: a.fullName,
-      salesCount12mo: a.totalSalesCount ?? 0,
-      avgSalePrice12mo: a.medianSalePrice ?? 0,
+    agent_count: agency.totalAgents ?? undefined,
+    sales_count_12mo: agency.totalSalesCount ?? undefined,
+    total_volume_12mo: agency.totalSalesVolume ?? undefined,
+    top_agents: agency.agents?.slice(0, 5).map((a) => ({
+      full_name: a.fullName,
+      sales_count_12mo: a.totalSalesCount ?? 0,
+      avg_sale_price_12mo: a.medianSalePrice ?? 0,
     })),
     description: agency.description ?? undefined,
   };
@@ -293,16 +293,23 @@ async function fetchSuburbContext(slug?: string): Promise<SuburbVoiceContext | n
   if (!suburb) return null;
 
   // Fetch top agents serving this suburb
-  const topAgents = await getTopAgentsInSuburb(slug, 5);
+  const topAgentsRaw = await getTopAgentsInSuburb(slug, 5);
+  const topAgents = topAgentsRaw.map((a) => ({
+    full_name: a.fullName,
+    agency_name: a.agencyName,
+    sales_count_suburb: a.salesCountSuburb,
+    specializations: a.specializations,
+    rating: a.rating,
+  }));
 
   return {
     name: suburb.name,
     state: suburb.state,
     postcode: suburb.postcode,
-    salesCount12mo: suburb.salesVolume12m ?? undefined,
-    medianHousePrice12mo: suburb.medianHousePrice ?? undefined,
-    medianApartmentPrice12mo: suburb.medianUnitPrice ?? undefined,
-    medianDom12mo: suburb.avgDaysOnMarket ?? undefined,
-    topAgents,
+    sales_count_12mo: suburb.salesVolume12m ?? undefined,
+    median_house_price_12mo: suburb.medianHousePrice ?? undefined,
+    median_apartment_price_12mo: suburb.medianUnitPrice ?? undefined,
+    median_dom_12mo: suburb.avgDaysOnMarket ?? undefined,
+    top_agents: topAgents,
   };
 }

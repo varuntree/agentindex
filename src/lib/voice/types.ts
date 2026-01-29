@@ -9,12 +9,12 @@ export type VoiceStatus = 'idle' | 'connecting' | 'listening' | 'speaking' | 'er
 export type PageType = 'home' | 'agent' | 'agency' | 'suburb';
 
 export interface VoiceSessionRequest {
-  pageType: PageType;
-  voiceMode: VoiceMode;
-  agentSlug?: string;
-  agencySlug?: string;
-  suburbSlug?: string;
-  contextData?: {
+  page_type: PageType;
+  voice_mode: VoiceMode;
+  agent_slug?: string;
+  agency_slug?: string;
+  suburb_slug?: string;
+  context_data?: {
     agent?: AgentVoiceContext;
     agency?: AgencyVoiceContext;
     suburb?: SuburbVoiceContext;
@@ -26,33 +26,33 @@ export interface VoiceSessionResponse {
   error?: string;
 }
 
-// Context types for voice prompts
+// Context types for voice prompts (snake_case per spec)
 export interface AgentVoiceContext {
-  fullName: string;
-  agencyName: string;
-  yearsExperience?: number;
+  full_name: string;
+  agency_name: string;
+  years_experience?: number;
   languages?: string[];
   specializations?: string[];
   suburbs?: string[];
-  salesCount12mo?: number;
-  avgSalePrice12mo?: number;
-  medianDom12mo?: number;
+  sales_count_12mo?: number;
+  avg_sale_price_12mo?: number;
+  median_dom_12mo?: number;
   rating?: number;
-  reviewCount?: number;
-  recentSales?: SaleContext[];
+  review_count?: number;
+  recent_sales?: SaleContext[];
   bio?: string;
 }
 
 export interface AgencyVoiceContext {
   name: string;
   locations?: string[];
-  establishedYear?: number;
-  agentCount?: number;
+  established_year?: number;
+  agent_count?: number;
   specializations?: string[];
-  salesCount12mo?: number;
-  avgSalePrice12mo?: number;
-  totalVolume12mo?: number;
-  topAgents?: TopAgentContext[];
+  sales_count_12mo?: number;
+  avg_sale_price_12mo?: number;
+  total_volume_12mo?: number;
+  top_agents?: TopAgentContext[];
   description?: string;
 }
 
@@ -60,33 +60,33 @@ export interface SuburbVoiceContext {
   name: string;
   state: string;
   postcode: string;
-  salesCount12mo?: number;
-  medianHousePrice12mo?: number;
-  medianApartmentPrice12mo?: number;
-  medianDom12mo?: number;
-  topAgents?: SuburbAgentContext[];
+  sales_count_12mo?: number;
+  median_house_price_12mo?: number;
+  median_apartment_price_12mo?: number;
+  median_dom_12mo?: number;
+  top_agents?: SuburbAgentContext[];
   demographics?: string;
 }
 
 export interface SaleContext {
   address: string;
-  propertyType: string;
+  property_type: string;
   bedrooms: number;
   bathrooms: number;
   price: number;
-  soldDate: string;
+  sold_date: string;
 }
 
 export interface TopAgentContext {
-  fullName: string;
-  salesCount12mo: number;
-  avgSalePrice12mo: number;
+  full_name: string;
+  sales_count_12mo: number;
+  avg_sale_price_12mo: number;
 }
 
 export interface SuburbAgentContext {
-  fullName: string;
-  agencyName: string;
-  salesCountSuburb: number;
+  full_name: string;
+  agency_name: string;
+  sales_count_suburb: number;
   specializations: string[];
   rating: number;
 }
@@ -125,5 +125,5 @@ export type DynamicVariables =
 
 export interface VoiceEntityInfo {
   name: string;
-  assistantLabel?: string;
+  assistant_label?: string;
 }

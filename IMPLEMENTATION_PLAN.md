@@ -425,12 +425,14 @@ None. All blocking items resolved.
 - **Feedback:** Changed VoiceStatus to 5 states: idle, connecting, listening, speaking, error. VoiceProvider updates status based on conversation.isSpeaking. VoicePanel derives visual state from status, removed isSpeaking prop.
 
 ### TASK-039: Voice context snake_case
-- **Status:** `pending`
+- **Status:** `completed`
 - **Scope:** Change voice context field names to snake_case per spec
-- **Files:** `src/lib/voice/context.ts`, `src/lib/voice/types.ts`
+- **Files:** `src/lib/voice/types.ts`, `src/lib/voice/context.ts`, `src/app/api/voice/signed-url/route.ts`, `src/components/voice/VoiceContextSetter.tsx`, `src/components/voice/VoicePanel.tsx`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] API response uses snake_case
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] API response uses snake_case
+- **Feedback:** Converted 17+ fields from camelCase to snake_case. Updated types, context builders, and signed-url route. Also updated VoiceSessionRequest (page_type, voice_mode, etc.) and VoiceEntityInfo (assistant_label).
 
 ---
 

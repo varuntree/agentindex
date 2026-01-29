@@ -14,11 +14,11 @@ import type {
 export function buildAgentContext(agent: AgentVoiceContext): string {
   const lines: string[] = [];
 
-  lines.push(`Name: ${agent.fullName}`);
-  lines.push(`Agency: ${agent.agencyName}`);
+  lines.push(`Name: ${agent.full_name}`);
+  lines.push(`Agency: ${agent.agency_name}`);
 
-  if (agent.yearsExperience) {
-    lines.push(`Years experience: ${agent.yearsExperience}`);
+  if (agent.years_experience) {
+    lines.push(`Years experience: ${agent.years_experience}`);
   }
 
   if (agent.languages && agent.languages.length > 0) {
@@ -35,40 +35,40 @@ export function buildAgentContext(agent: AgentVoiceContext): string {
 
   // Performance section
   const hasPerformanceData =
-    agent.salesCount12mo ||
-    agent.avgSalePrice12mo ||
-    agent.medianDom12mo ||
+    agent.sales_count_12mo ||
+    agent.avg_sale_price_12mo ||
+    agent.median_dom_12mo ||
     agent.rating;
 
   if (hasPerformanceData) {
     lines.push('');
     lines.push('Performance (12 months):');
 
-    if (agent.salesCount12mo) {
-      lines.push(`- Total sales: ${agent.salesCount12mo}`);
+    if (agent.sales_count_12mo) {
+      lines.push(`- Total sales: ${agent.sales_count_12mo}`);
     }
-    if (agent.avgSalePrice12mo) {
+    if (agent.avg_sale_price_12mo) {
       lines.push(
-        `- Average sale price: $${agent.avgSalePrice12mo.toLocaleString()}`
+        `- Average sale price: $${agent.avg_sale_price_12mo.toLocaleString()}`
       );
     }
-    if (agent.medianDom12mo) {
-      lines.push(`- Median days on market: ${agent.medianDom12mo}`);
+    if (agent.median_dom_12mo) {
+      lines.push(`- Median days on market: ${agent.median_dom_12mo}`);
     }
     if (agent.rating !== undefined) {
       lines.push(
-        `- Rating: ${agent.rating}/5${agent.reviewCount ? ` (${agent.reviewCount} reviews)` : ''}`
+        `- Rating: ${agent.rating}/5${agent.review_count ? ` (${agent.review_count} reviews)` : ''}`
       );
     }
   }
 
   // Recent sales
-  if (agent.recentSales && agent.recentSales.length > 0) {
+  if (agent.recent_sales && agent.recent_sales.length > 0) {
     lines.push('');
     lines.push('Recent sales:');
-    agent.recentSales.slice(0, 5).forEach((sale) => {
+    agent.recent_sales.slice(0, 5).forEach((sale) => {
       lines.push(
-        `- ${sale.address} — ${sale.propertyType}, ${sale.bedrooms}bed/${sale.bathrooms}bath — $${sale.price.toLocaleString()} (${sale.soldDate})`
+        `- ${sale.address} — ${sale.property_type}, ${sale.bedrooms}bed/${sale.bathrooms}bath — $${sale.price.toLocaleString()} (${sale.sold_date})`
       );
     });
   }
@@ -94,12 +94,12 @@ export function buildAgencyContext(agency: AgencyVoiceContext): string {
     lines.push(`Locations: ${agency.locations.join(', ')}`);
   }
 
-  if (agency.establishedYear) {
-    lines.push(`Established: ${agency.establishedYear}`);
+  if (agency.established_year) {
+    lines.push(`Established: ${agency.established_year}`);
   }
 
-  if (agency.agentCount) {
-    lines.push(`Total agents: ${agency.agentCount}`);
+  if (agency.agent_count) {
+    lines.push(`Total agents: ${agency.agent_count}`);
   }
 
   if (agency.specializations && agency.specializations.length > 0) {
@@ -108,34 +108,34 @@ export function buildAgencyContext(agency: AgencyVoiceContext): string {
 
   // Performance
   const hasPerformanceData =
-    agency.salesCount12mo || agency.avgSalePrice12mo || agency.totalVolume12mo;
+    agency.sales_count_12mo || agency.avg_sale_price_12mo || agency.total_volume_12mo;
 
   if (hasPerformanceData) {
     lines.push('');
     lines.push('Performance (12 months):');
 
-    if (agency.salesCount12mo) {
-      lines.push(`- Total sales: ${agency.salesCount12mo}`);
+    if (agency.sales_count_12mo) {
+      lines.push(`- Total sales: ${agency.sales_count_12mo}`);
     }
-    if (agency.avgSalePrice12mo) {
+    if (agency.avg_sale_price_12mo) {
       lines.push(
-        `- Average sale price: $${agency.avgSalePrice12mo.toLocaleString()}`
+        `- Average sale price: $${agency.avg_sale_price_12mo.toLocaleString()}`
       );
     }
-    if (agency.totalVolume12mo) {
+    if (agency.total_volume_12mo) {
       lines.push(
-        `- Total transaction value: $${agency.totalVolume12mo.toLocaleString()}`
+        `- Total transaction value: $${agency.total_volume_12mo.toLocaleString()}`
       );
     }
   }
 
   // Top agents
-  if (agency.topAgents && agency.topAgents.length > 0) {
+  if (agency.top_agents && agency.top_agents.length > 0) {
     lines.push('');
     lines.push('Top agents:');
-    agency.topAgents.slice(0, 5).forEach((agent) => {
+    agency.top_agents.slice(0, 5).forEach((agent) => {
       lines.push(
-        `- ${agent.fullName}: ${agent.salesCount12mo} sales, $${agent.avgSalePrice12mo.toLocaleString()} avg`
+        `- ${agent.full_name}: ${agent.sales_count_12mo} sales, $${agent.avg_sale_price_12mo.toLocaleString()} avg`
       );
     });
   }
@@ -160,40 +160,40 @@ export function buildSuburbContext(suburb: SuburbVoiceContext): string {
 
   // Market statistics
   const hasMarketData =
-    suburb.salesCount12mo ||
-    suburb.medianHousePrice12mo ||
-    suburb.medianApartmentPrice12mo ||
-    suburb.medianDom12mo;
+    suburb.sales_count_12mo ||
+    suburb.median_house_price_12mo ||
+    suburb.median_apartment_price_12mo ||
+    suburb.median_dom_12mo;
 
   if (hasMarketData) {
     lines.push('');
     lines.push('Market statistics (12 months):');
 
-    if (suburb.salesCount12mo) {
-      lines.push(`- Total sales: ${suburb.salesCount12mo}`);
+    if (suburb.sales_count_12mo) {
+      lines.push(`- Total sales: ${suburb.sales_count_12mo}`);
     }
-    if (suburb.medianHousePrice12mo) {
+    if (suburb.median_house_price_12mo) {
       lines.push(
-        `- Median house price: $${suburb.medianHousePrice12mo.toLocaleString()}`
+        `- Median house price: $${suburb.median_house_price_12mo.toLocaleString()}`
       );
     }
-    if (suburb.medianApartmentPrice12mo) {
+    if (suburb.median_apartment_price_12mo) {
       lines.push(
-        `- Median apartment price: $${suburb.medianApartmentPrice12mo.toLocaleString()}`
+        `- Median apartment price: $${suburb.median_apartment_price_12mo.toLocaleString()}`
       );
     }
-    if (suburb.medianDom12mo) {
-      lines.push(`- Median days on market: ${suburb.medianDom12mo}`);
+    if (suburb.median_dom_12mo) {
+      lines.push(`- Median days on market: ${suburb.median_dom_12mo}`);
     }
   }
 
   // Top agents
-  if (suburb.topAgents && suburb.topAgents.length > 0) {
+  if (suburb.top_agents && suburb.top_agents.length > 0) {
     lines.push('');
     lines.push(`Top agents in ${suburb.name}:`);
-    suburb.topAgents.slice(0, 10).forEach((agent) => {
+    suburb.top_agents.slice(0, 10).forEach((agent) => {
       lines.push(
-        `- ${agent.fullName} (${agent.agencyName}): ${agent.salesCountSuburb} sales, ${agent.specializations.join(', ')}, ${agent.rating}/5 rating`
+        `- ${agent.full_name} (${agent.agency_name}): ${agent.sales_count_suburb} sales, ${agent.specializations.join(', ')}, ${agent.rating}/5 rating`
       );
     });
   }

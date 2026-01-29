@@ -315,13 +315,14 @@ None. All blocking items resolved.
   - [x] `pnpm build` passes
 - **Feedback:** Created LicenseOutputSchema, buildLicenseVerificationPrompt, parseLicenseResponse. Agent searches service.nsw.gov.au for license data.
 
-### TASK-028: Domain rate limiter
-- **Status:** `pending`
+### TASK-028: Domain rate limiter ✓
+- **Status:** `completed`
 - **Scope:** Add `DomainRateLimiter` class (30 req/domain/min per spec)
-- **Files:** `pipeline/utils/rate-limiter.ts`, `pipeline/scripts/pipeline.ts`
+- **Files:** `pipeline/utils/rate-limiter.ts`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] Rate limiting logs visible
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+- **Feedback:** Created DomainRateLimiter with sliding window, waitForSlot(), verbose logging. Exported singleton for easy integration.
 
 ### TASK-029: Transaction wrapper
 - **Status:** `pending`

@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "tsx loop.ts",
-    "start:ui": "tsx server.ts",
-    "dev": "tsx watch loop.ts",
+    "start": "tsx server.ts",
+    "dev": "tsx watch server.ts",
     "stop": "curl -X POST http://localhost:3001/api/stop || true"
   },
   "dependencies": {

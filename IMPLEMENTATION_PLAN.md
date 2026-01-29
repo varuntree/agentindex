@@ -324,13 +324,15 @@ None. All blocking items resolved.
   - [x] `pnpm build` passes
 - **Feedback:** Created DomainRateLimiter with sliding window, waitForSlot(), verbose logging. Exported singleton for easy integration.
 
-### TASK-029: Transaction wrapper
-- **Status:** `pending`
+### TASK-029: Transaction wrapper ✓
+- **Status:** `completed`
 - **Scope:** Wrap storage operations in `db.transaction()` for atomicity
 - **Files:** `pipeline/scripts/pipeline.ts`
 - **Verification:**
-  - [ ] `pnpm typecheck` passes
-  - [ ] Rollback on error
+  - [x] `pnpm typecheck` passes
+  - [x] `pnpm build` passes
+  - [x] All storage ops use tx
+- **Feedback:** Wrapped storeAgencyWithAgents in db.transaction(). Updated storeAgent, linkAgentToSuburbs, storeSale, storeReview to accept tx?: DbClient and use tx ?? db pattern. Errors auto-rollback.
 
 ### TASK-030: Merge strategy
 - **Status:** `pending`

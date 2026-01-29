@@ -18,7 +18,7 @@
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { eq, sql } from 'drizzle-orm';
-import { db } from '../../src/lib/db';
+import { db, type DbClient } from '../../src/lib/db';
 import {
   agencies,
   agents,
@@ -790,61 +790,63 @@ async function storeAgencyWithAgents(
   enrichedAgents: AgentOutput[],
   config: CLIArgs
 ): Promise<StoreResult> {
-  const agencySlug = generateSlug(agencyBasic.name, agencyBasic.suburb);
+  return await db.transaction(async (tx) => {
+    const agencySlug = generateSlug(agencyBasic.name, agencyBasic.suburb);
 
-  const agencyValues: NewAgency = {
-    slug: agencySlug,
-    name: agencyBasic.name,
-    brandName: agencyBasic.brandName,
-    logoUrl: agencyBasic.logoUrl,
-    websiteUrl: agencyBasic.websiteUrl,
-    phone: agencyBasic.phone,
-    email: agencyBasic.email,
-    streetAddress: agencyBasic.streetAddress,
-    suburb: agencyBasic.suburb,
-    state: agencyBasic.state,
-    postcode: agencyBasic.postcode,
-    lat: agencyBasic.lat,
-    lng: agencyBasic.lng,
-    description: agencyBasic.description,
-    sourceUrl: agencyBasic.sourceUrl,
-    lastScrapedAt: new Date(),
-  };
+    const agencyValues: NewAgency = {
+      slug: agencySlug,
+      name: agencyBasic.name,
+      brandName: agencyBasic.brandName,
+      logoUrl: agencyBasic.logoUrl,
+      websiteUrl: agencyBasic.websiteUrl,
+      phone: agencyBasic.phone,
+      email: agencyBasic.email,
+      streetAddress: agencyBasic.streetAddress,
+      suburb: agencyBasic.suburb,
+      state: agencyBasic.state,
+      postcode: agencyBasic.postcode,
+      lat: agencyBasic.lat,
+      lng: agencyBasic.lng,
+      description: agencyBasic.description,
+      sourceUrl: agencyBasic.sourceUrl,
+      lastScrapedAt: new Date(),
+    };
 
-  // Upsert agency
-  const existingAgency = await db
-    .select()
-    .from(agencies)
-    .where(eq(agencies.slug, agencySlug))
-    .limit(1);
+    // Upsert agency
+    const existingAgency = await tx
+      .select()
+      .from(agencies)
+      .where(eq(agencies.slug, agencySlug))
+      .limit(1);
 
-  let agencyId: number;
-  if (existingAgency.length > 0) {
-    await db.update(agencies).set(agencyValues).where(eq(agencies.slug, agencySlug));
-    agencyId = existingAgency[0].id;
-    log('progress', 'Storage', `Updated agency: ${agencyBasic.name} (id=${agencyId})`);
-  } else {
-    const [inserted] = await db.insert(agencies).values(agencyValues).returning();
-    agencyId = inserted.id;
-    log('progress', 'Storage', `Created agency: ${agencyBasic.name} (id=${agencyId})`);
-  }
+    let agencyId: number;
+    if (existingAgency.length > 0) {
+      await tx.update(agencies).set(agencyValues).where(eq(agencies.slug, agencySlug));
+      agencyId = existingAgency[0].id;
+      log('progress', 'Storage', `Updated agency: ${agencyBasic.name} (id=${agencyId})`);
+    } else {
+      const [inserted] = await tx.insert(agencies).values(agencyValues).returning();
+      agencyId = inserted.id;
+      log('progress', 'Storage', `Created agency: ${agencyBasic.name} (id=${agencyId})`);
+    }
 
-  let totalSales = 0;
-  let totalReviews = 0;
+    let totalSales = 0;
+    let totalReviews = 0;
 
-  // Store each agent
-  for (const agentData of enrichedAgents) {
-    const result = await storeAgent(agentData, agencyId, agencyBasic.suburb);
-    totalSales += result.salesCount;
-    totalReviews += result.reviewCount;
-  }
+    // Store each agent
+    for (const agentData of enrichedAgents) {
+      const result = await storeAgent(agentData, agencyId, agencyBasic.suburb, tx);
+      totalSales += result.salesCount;
+      totalReviews += result.reviewCount;
+    }
 
-  return {
-    agencyId,
-    agentCount: enrichedAgents.length,
-    salesCount: totalSales,
-    reviewCount: totalReviews,
-  };
+    return {
+      agencyId,
+      agentCount: enrichedAgents.length,
+      salesCount: totalSales,
+      reviewCount: totalReviews,
+    };
+  });
 }
 
 interface AgentStoreResult {
@@ -856,8 +858,10 @@ interface AgentStoreResult {
 async function storeAgent(
   agentData: AgentOutput,
   agencyId: number,
-  defaultSuburb: string
+  defaultSuburb: string,
+  tx?: DbClient
 ): Promise<AgentStoreResult> {
+  const client = tx ?? db;
   const fullName = `${agentData.firstName} ${agentData.lastName}`;
   const agentSlug = generateSlug(agentData.firstName, agentData.lastName);
 
@@ -892,7 +896,7 @@ async function storeAgent(
   };
 
   // Upsert agent
-  const existingAgent = await db
+  const existingAgent = await client
     .select()
     .from(agents)
     .where(eq(agents.slug, agentSlug))
@@ -900,11 +904,11 @@ async function storeAgent(
 
   let agentId: number;
   if (existingAgent.length > 0) {
-    await db.update(agents).set(agentValues).where(eq(agents.slug, agentSlug));
+    await client.update(agents).set(agentValues).where(eq(agents.slug, agentSlug));
     agentId = existingAgent[0].id;
     log('debug', 'Storage', `Updated agent: ${fullName} (id=${agentId})`);
   } else {
-    const [inserted] = await db.insert(agents).values(agentValues).returning();
+    const [inserted] = await client.insert(agents).values(agentValues).returning();
     agentId = inserted.id;
     log('debug', 'Storage', `Created agent: ${fullName} (id=${agentId})`);
   }
@@ -913,13 +917,13 @@ async function storeAgent(
   const suburbsToLink = agentData.suburbsServiced?.length
     ? agentData.suburbsServiced
     : [defaultSuburb];
-  await linkAgentToSuburbs(agentId, suburbsToLink);
+  await linkAgentToSuburbs(agentId, suburbsToLink, tx);
 
   // Store sales
   let salesCount = 0;
   if (agentData.sales) {
     for (const sale of agentData.sales) {
-      await storeSale(sale as SaleOutput, agentId, agencyId);
+      await storeSale(sale as SaleOutput, agentId, agencyId, tx);
       salesCount++;
     }
   }
@@ -928,7 +932,7 @@ async function storeAgent(
   let reviewCount = 0;
   if (agentData.reviews) {
     for (const review of agentData.reviews) {
-      await storeReview(review as ReviewOutput, agentId);
+      await storeReview(review as ReviewOutput, agentId, tx);
       reviewCount++;
     }
   }
@@ -938,20 +942,22 @@ async function storeAgent(
 
 async function linkAgentToSuburbs(
   agentId: number,
-  suburbNames: string[]
+  suburbNames: string[],
+  tx?: DbClient
 ): Promise<void> {
+  const client = tx ?? db;
   // Delete existing links
-  await db.delete(agentSuburbs).where(eq(agentSuburbs.agentId, agentId));
+  await client.delete(agentSuburbs).where(eq(agentSuburbs.agentId, agentId));
 
   for (const suburbName of suburbNames) {
-    const [suburb] = await db
+    const [suburb] = await client
       .select()
       .from(suburbs)
       .where(sql`LOWER(${suburbs.name}) = LOWER(${suburbName})`)
       .limit(1);
 
     if (suburb) {
-      await db.insert(agentSuburbs).values({
+      await client.insert(agentSuburbs).values({
         agentId,
         suburbId: suburb.id,
         isPrimary: suburbNames.indexOf(suburbName) === 0 ? 1 : 0,
@@ -963,10 +969,13 @@ async function linkAgentToSuburbs(
 async function storeSale(
   sale: SaleOutput,
   agentId: number,
-  agencyId: number
+  agencyId: number,
+  tx?: DbClient
 ): Promise<void> {
+  const client = tx ?? db;
+
   // Check for duplicate
-  const existingSale = await db
+  const existingSale = await client
     .select()
     .from(sales)
     .where(
@@ -998,13 +1007,16 @@ async function storeSale(
     sourceUrl: sale.sourceUrl,
   };
 
-  await db.insert(sales).values(saleValues);
+  await client.insert(sales).values(saleValues);
 }
 
 async function storeReview(
   review: ReviewOutput,
-  agentId: number
+  agentId: number,
+  tx?: DbClient
 ): Promise<void> {
+  const client = tx ?? db;
+
   const reviewValues: NewReview = {
     agentId,
     reviewerName: review.reviewerName,
@@ -1020,7 +1032,7 @@ async function storeReview(
     sourcePlatform: review.sourcePlatform,
   };
 
-  await db.insert(reviews).values(reviewValues);
+  await client.insert(reviews).values(reviewValues);
 }
 
 // ---------------------------------------------------------------------------

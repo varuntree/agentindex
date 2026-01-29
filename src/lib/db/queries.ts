@@ -21,6 +21,11 @@ export type SearchResult = {
   slug: string;
   label: string;
   sublabel: string;
+  // Agent-only fields (per spec 3.5.7)
+  photo_url?: string | null;
+  suburbs?: string[];
+  total_sales_count?: number;
+  avg_sale_price?: number | null;
 };
 
 export type AutocompleteResult = {
@@ -711,7 +716,8 @@ export async function searchFTS(
     try {
       const agentRows = sqliteDb
         .prepare(
-          `SELECT a.slug, a.full_name, ag.name AS agency_name
+          `SELECT a.slug, a.full_name, a.photo_url, a.total_sales_count, a.median_sale_price,
+                  ag.name AS agency_name
            FROM agents_fts
            JOIN agents a ON a.id = agents_fts.rowid
            LEFT JOIN agencies ag ON a.agency_id = ag.id
@@ -721,8 +727,34 @@ export async function searchFTS(
         .all(sanitized, limit) as {
         slug: string;
         full_name: string;
+        photo_url: string | null;
+        total_sales_count: number | null;
+        median_sale_price: number | null;
         agency_name: string | null;
       }[];
+
+      // Get suburbs for each agent
+      const agentSuburbsMap = new Map<string, string[]>();
+      if (agentRows.length > 0) {
+        const slugs = agentRows.map((r) => r.slug);
+        const placeholders = slugs.map(() => "?").join(",");
+        const suburbRows = sqliteDb
+          .prepare(
+            `SELECT a.slug as agent_slug, s.name as suburb_name
+             FROM agents a
+             INNER JOIN agent_suburbs asub ON a.id = asub.agent_id
+             INNER JOIN suburbs s ON s.id = asub.suburb_id
+             WHERE a.slug IN (${placeholders})
+             ORDER BY asub.is_primary DESC, asub.sales_count DESC`
+          )
+          .all(...slugs) as { agent_slug: string; suburb_name: string }[];
+
+        for (const sr of suburbRows) {
+          const existing = agentSuburbsMap.get(sr.agent_slug) ?? [];
+          existing.push(sr.suburb_name);
+          agentSuburbsMap.set(sr.agent_slug, existing);
+        }
+      }
 
       for (const row of agentRows) {
         results.push({
@@ -730,6 +762,10 @@ export async function searchFTS(
           slug: row.slug,
           label: row.full_name,
           sublabel: row.agency_name ?? "Independent Agent",
+          photo_url: row.photo_url,
+          suburbs: agentSuburbsMap.get(row.slug) ?? [],
+          total_sales_count: row.total_sales_count ?? 0,
+          avg_sale_price: row.median_sale_price,
         });
       }
     } catch {
